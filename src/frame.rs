@@ -2,18 +2,6 @@ use crate::error::AdsbError;
 
 const ADSB_FRAME_BYTES: usize = 14;
 
-#[derive(Debug)]
-pub enum TypeCode {
-    AircraftIdentification,
-    SurfacePosition,
-    AirbornePosition,
-    AiborneVelocity,
-    AircraftStatus,
-    TargetStateStatus,
-    OperationalStatus,
-    Unsupported,
-}
-
 pub struct RawFrame {
     pub bytes: [u8; ADSB_FRAME_BYTES],
 }
@@ -44,27 +32,16 @@ impl RawFrame {
     pub const fn capability(&self) -> u8 {
         // CA is the transponder capabilities corresponds to bits 6-8
         self.bytes[0] & 0x07
-        // self.bytes.first().map_or(0, |n| n & 0x07)
     }
 
-    pub fn icao(&self) -> String {
-        format!(
-            "{:02X}{:02X}{:02X}",
-            self.bytes[1], self.bytes[2], self.bytes[3]
-        )
+    pub fn icao(&self) -> u32 {
+        (u32::from(self.bytes[1]) << 16)
+            | (u32::from(self.bytes[2]) << 8)
+            | u32::from(self.bytes[3])
     }
 
-    pub const fn type_code(&self) -> TypeCode {
-        match (self.bytes[4] >> 3) & 0x1F {
-            1..=4 => TypeCode::AircraftIdentification,
-            5..=8 => TypeCode::SurfacePosition,
-            9..=18 | 20..=22 => TypeCode::AirbornePosition,
-            19 => TypeCode::AiborneVelocity,
-            28 => TypeCode::AircraftStatus,
-            29 => TypeCode::TargetStateStatus,
-            31 => TypeCode::OperationalStatus,
-            _ => TypeCode::Unsupported,
-        }
+    pub const fn type_code(&self) -> u8 {
+        (self.bytes[4] >> 3) & 0x1F
     }
 }
 
@@ -109,18 +86,18 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_icao_address() {
+        let Ok(frame) = RawFrame::from_hex("8D4840D6202CC371C32CE0576098") else {
+            return;
+        };
+        assert_matches!(frame.icao(), 0x0048_40D6);
+    }
+
+    #[test]
     fn test_valid_type_code() {
         let Ok(frame) = RawFrame::from_hex("8D4840D6202CC371C32CE0576098") else {
             return;
         };
-        assert_matches!(frame.type_code(), TypeCode::AircraftIdentification);
-    }
-
-    #[test]
-    fn test_unsupported_type_code() {
-        let Ok(frame) = RawFrame::from_hex("8D4840D6202CC371C32CE0576098") else {
-            return;
-        };
-        assert_matches!(frame.type_code(), TypeCode::AircraftIdentification);
+        assert_matches!(frame.type_code(), 4);
     }
 }
