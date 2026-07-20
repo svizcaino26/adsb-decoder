@@ -27,6 +27,11 @@ impl RawFrame {
 
         Ok(Self { bytes })
     }
+
+    pub fn capability(&self) -> u8 {
+        // CA is the transponder capabilities corresponds to bits 6-8
+        self.bytes.first().map_or(0, |n| n & 0x07)
+    }
 }
 
 #[cfg(test)]
@@ -55,5 +60,16 @@ mod tests {
     fn test_wrong_length_rejected() {
         let result = RawFrame::from_hex("8D4840D6");
         assert!(matches!(result, Err(AdsbError::InvalidLength(_))));
+    }
+
+    #[test]
+    fn test_transponder_capability_parsed() {
+        let Ok(frame) = RawFrame::from_hex("8D4840D6202CC371C32CE0576098") else {
+            return;
+        };
+        // 5 means a Level 2+ transponder,
+        // with ability to set CA to 7,
+        // airborne
+        assert!(matches!(frame.capability(), 5));
     }
 }
