@@ -54,7 +54,7 @@ impl RawFrame {
 
     pub fn ct(&self) -> MessageType<'_> {
         let payload = &self.bytes[4..=10];
-        match self.bytes[4] >> 4 {
+        match (self.bytes[4] >> 3) & 0x1F {
             1..=4 => MessageType::AircraftIdentification(payload),
             5..=8 => MessageType::SurfacePosition(payload),
             9..=18 | 20..=22 => MessageType::AirbornePosition(payload),
