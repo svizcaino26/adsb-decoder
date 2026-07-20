@@ -1,6 +1,17 @@
 use crate::error::AdsbError;
 const ADSB_FRAME_BYTES: usize = 14;
 
+pub enum MessageType<'a> {
+    AircraftIdentification(&'a [u8]),
+    SurfacePosition(&'a [u8]),
+    AirbornePosition(&'a [u8]),
+    AiborneVelocity(&'a [u8]),
+    AircraftStatus(&'a [u8]),
+    TargetStateStatus(&'a [u8]),
+    OperationalStatus(&'a [u8]),
+    Unsupported,
+}
+
 pub struct RawFrame {
     pub bytes: [u8; ADSB_FRAME_BYTES],
 }
@@ -39,6 +50,20 @@ impl RawFrame {
             "{:02X}{:02X}{:02X}",
             self.bytes[1], self.bytes[2], self.bytes[3]
         )
+    }
+
+    pub fn ct(&self) -> MessageType<'_> {
+        let payload = &self.bytes[4..=10];
+        match self.bytes[4] >> 4 {
+            1..=4 => MessageType::AircraftIdentification(payload),
+            5..=8 => MessageType::SurfacePosition(payload),
+            9..=18 | 20..=22 => MessageType::AirbornePosition(payload),
+            19 => MessageType::AiborneVelocity(payload),
+            28 => MessageType::AircraftStatus(payload),
+            29 => MessageType::TargetStateStatus(payload),
+            31 => MessageType::OperationalStatus(payload),
+            _ => MessageType::Unsupported,
+        }
     }
 }
 
