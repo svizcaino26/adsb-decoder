@@ -28,9 +28,17 @@ impl RawFrame {
         Ok(Self { bytes })
     }
 
-    pub fn capability(&self) -> u8 {
+    pub const fn capability(&self) -> u8 {
         // CA is the transponder capabilities corresponds to bits 6-8
-        self.bytes.first().map_or(0, |n| n & 0x07)
+        self.bytes[0] & 0x07
+        // self.bytes.first().map_or(0, |n| n & 0x07)
+    }
+
+    pub fn icao(&self) -> String {
+        format!(
+            "{:02X}{:02X}{:02X}",
+            self.bytes[1], self.bytes[2], self.bytes[3]
+        )
     }
 }
 
