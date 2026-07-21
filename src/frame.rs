@@ -2,8 +2,9 @@ use crate::error::AdsbError;
 
 const ADSB_FRAME_BYTES: usize = 14;
 
+#[derive(Debug)]
 pub struct RawFrame {
-    pub bytes: [u8; ADSB_FRAME_BYTES],
+    bytes: [u8; ADSB_FRAME_BYTES],
 }
 
 impl RawFrame {
@@ -43,6 +44,10 @@ impl RawFrame {
     pub const fn type_code(&self) -> u8 {
         (self.bytes[4] >> 3) & 0x1F
     }
+
+    pub fn payload(&self) -> &[u8] {
+        &self.bytes[4..11]
+    }
 }
 
 #[cfg(test)]
@@ -59,19 +64,19 @@ mod tests {
     #[test]
     fn test_non_adsb_df_rejected() {
         let result = RawFrame::from_hex("284840D6202CC371C32CE0576022");
-        assert!(matches!(result, Err(AdsbError::NotAdsb(_))));
+        assert_matches!(result, Err(AdsbError::NotAdsb(_)));
     }
 
     #[test]
     fn test_invalid_hex_rejected() {
         let result = RawFrame::from_hex("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
-        assert!(matches!(result, Err(AdsbError::InvalidHex(_))));
+        assert_matches!(result, Err(AdsbError::InvalidHex(_)));
     }
 
     #[test]
     fn test_wrong_length_rejected() {
         let result = RawFrame::from_hex("8D4840D6");
-        assert!(matches!(result, Err(AdsbError::InvalidLength(_))));
+        assert_matches!(result, Err(AdsbError::InvalidLength(_)));
     }
 
     #[test]
@@ -82,7 +87,7 @@ mod tests {
         // 5 means a Level 2+ transponder,
         // with ability to set CA to 7,
         // airborne
-        assert!(matches!(frame.capability(), 5));
+        assert_eq!(frame.capability(), 5);
     }
 
     #[test]
@@ -90,7 +95,7 @@ mod tests {
         let Ok(frame) = RawFrame::from_hex("8D4840D6202CC371C32CE0576098") else {
             return;
         };
-        assert_matches!(frame.icao(), 0x0048_40D6);
+        assert_eq!(frame.icao(), 0x0048_40D6);
     }
 
     #[test]
@@ -98,6 +103,14 @@ mod tests {
         let Ok(frame) = RawFrame::from_hex("8D4840D6202CC371C32CE0576098") else {
             return;
         };
-        assert_matches!(frame.type_code(), 4);
+        assert_eq!(frame.type_code(), 4);
+    }
+
+    #[test]
+    fn test_extract_payload() {
+        let Ok(frame) = RawFrame::from_hex("8D4840D6202CC371C32CE0576098") else {
+            return;
+        };
+        assert_matches!(frame.payload(), &[0x20, 0x2C, 0xC3, 0x71, 0xC3, 0x2C, 0xE0]);
     }
 }
