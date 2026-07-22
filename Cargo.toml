@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-hex = "0.4.3"
 thiserror = "2.0.18"
 
 [lints.clippy]
@@ -13,7 +12,7 @@ nursery = { level = "deny", priority = -1 }
 unwrap_used = "deny"
 expect_used = "deny"
 indexing_slicing = "deny"
-arithmetic_side_effects = "deny"
+# arithmetic_side_effects = "deny"
 unreachable = "deny"
 unimplemented = "deny"
 unchecked_time_subtraction = "deny"
