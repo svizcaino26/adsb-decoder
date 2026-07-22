@@ -1,33 +1,32 @@
 use crate::error::AdsbError;
 
-const ADSB_FRAME_BYTES: usize = 14;
+const ADSB_FRAME_LENGTH: usize = 28;
 
+/// ADS-B frames are 112 bits.
+/// Bit 1 is the most significant bit of the frame, following the ICAO specification.
+/// Internally the frame is stored in the lower 112 bits of a `u128`.
 #[derive(Debug)]
 pub struct RawFrame {
-    bytes: [u8; ADSB_FRAME_BYTES],
+    bits: u128,
 }
 
 impl RawFrame {
     pub fn from_hex(hex_str: &str) -> Result<Self, AdsbError> {
         let hex_str = hex_str.trim().trim_start_matches('*').trim_end_matches(';');
 
-        let bytes_vec = hex::decode(hex_str)?;
-
-        let len = bytes_vec.len();
-        if len != ADSB_FRAME_BYTES {
+        let len = hex_str.len();
+        if len != ADSB_FRAME_LENGTH {
             return Err(AdsbError::InvalidLength(len));
         }
 
-        // avoiding slice indexing
-        let df = bytes_vec.first().map_or(0, |n| n >> 3);
+        let bits = u128::from_str_radix(hex_str, 16)?;
+
+        let df = (bits >> 107) & 0x1F;
         if df != 17 {
             return Err(AdsbError::NotAdsb(df));
         }
 
-        let mut bytes = [0u8; ADSB_FRAME_BYTES];
-        bytes.copy_from_slice(&bytes_vec);
-
-        Ok(Self { bytes })
+        Ok(Self { bits })
     }
 
     pub const fn capability(&self) -> u8 {
