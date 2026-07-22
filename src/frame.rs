@@ -29,23 +29,37 @@ impl RawFrame {
         Ok(Self { bits })
     }
 
-    pub const fn capability(&self) -> u8 {
-        // CA is the transponder capabilities corresponds to bits 6-8
-        self.bytes[0] & 0x07
-    }
+    /// Extracts a field from the ADS-B frame.
+    ///
+    /// Bit numbering follows the ICAO ADS-B specification:
+    /// - Bit 1 is the most significant bit of the 112-bit frame.
+    /// - Bit 112 is the least significant bit.
+    ///
+    /// # Examples
+    ///
+    /// ```text
+    /// bits(1, 5)   -> Downlink Format (DF)
+    /// bits(6, 3)   -> Capability (CA)
+    /// bits(9, 24)  -> ICAO address
+    /// bits(33, 5)  -> Type Code
+    /// ```
+    ///
+    /// # Error
+    /// - If either start or len are zero.
+    /// - If `(start + len - 1) > 112`.
+    pub const fn bits(&self, start: u8, len: u8) -> Result<u128, AdsbError> {
+        if start == 0 || len == 0 {
+            return Err(AdsbError::InvalidBitRange { start, len });
+        }
 
-    pub fn icao(&self) -> u32 {
-        (u32::from(self.bytes[1]) << 16)
-            | (u32::from(self.bytes[2]) << 8)
-            | u32::from(self.bytes[3])
-    }
+        let end = start + len - 1;
+        if end > ADSB_FRAME_BITS {
+            return Err(AdsbError::InvalidBitRange { start, len });
+        }
 
-    pub const fn type_code(&self) -> u8 {
-        (self.bytes[4] >> 3) & 0x1F
-    }
-
-    pub fn payload(&self) -> &[u8] {
-        &self.bytes[4..11]
+        let shift = ADSB_FRAME_BITS - end;
+        let mask = (1u128 << len) - 1;
+        Ok((self.bits >> shift) & mask)
     }
 }
 
