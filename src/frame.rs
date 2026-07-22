@@ -1,6 +1,7 @@
 use crate::error::AdsbError;
 
 const ADSB_FRAME_LENGTH: usize = 28;
+const ADSB_FRAME_BITS: u8 = 112;
 
 /// ADS-B frames are 112 bits.
 /// Bit 1 is the most significant bit of the frame, following the ICAO specification.
@@ -11,6 +12,12 @@ pub struct RawFrame {
 }
 
 impl RawFrame {
+    /// Parses a 112-bit ADS-B frame from a hexadecimal string
+    ///
+    /// # Error
+    /// - If the string is not 28 digits long.
+    /// - If the string contains invalid hexadecimal characters.
+    /// - If the first 5 most significant bits are not equal to 17 (Not an ADS-B message).
     pub fn from_hex(hex_str: &str) -> Result<Self, AdsbError> {
         let hex_str = hex_str.trim().trim_start_matches('*').trim_end_matches(';');
 
@@ -21,7 +28,8 @@ impl RawFrame {
 
         let bits = u128::from_str_radix(hex_str, 16)?;
 
-        let df = (bits >> 107) & 0x1F;
+        #[allow(clippy::expect_used)]
+        let df = u8::try_from((bits >> 107) & 0x1F).expect("DF is always <= 31 after masking");
         if df != 17 {
             return Err(AdsbError::NotAdsb(df));
         }
