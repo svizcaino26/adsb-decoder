@@ -93,37 +93,28 @@ mod tests {
     }
 
     #[test]
-    fn test_transponder_capability_parsed() {
+    #[allow(clippy::unwrap_used, clippy::panic)]
+    fn test_extract_bits() {
         let Ok(frame) = RawFrame::from_hex("8D4840D6202CC371C32CE0576098") else {
-            return;
+            panic!("failed to parse frame");
         };
-        // 5 means a Level 2+ transponder,
-        // with ability to set CA to 7,
-        // airborne
-        assert_eq!(frame.capability(), 5);
+
+        assert_eq!(frame.bits(1, 5).unwrap(), 17); // DF
+        assert_eq!(frame.bits(6, 3).unwrap(), 5); // CA
+        assert_eq!(frame.bits(9, 24).unwrap(), 0x0048_40D6); // ICAO
+        assert_eq!(frame.bits(33, 5).unwrap(), 4); // Type Code
+        assert_eq!(frame.bits(33, 56).unwrap(), 0x0020_2CC3_71C3_2CE0); // Payload
     }
 
     #[test]
-    fn test_parse_icao_address() {
-        let Ok(frame) = RawFrame::from_hex("8D4840D6202CC371C32CE0576098") else {
-            return;
-        };
-        assert_eq!(frame.icao(), 0x0048_40D6);
-    }
+    #[allow(clippy::unwrap_used, clippy::panic)]
+    fn test_invalid_bit_range() {
+        let frame = RawFrame::from_hex("8D4840D6202CC371C32CE0576098").unwrap();
 
-    #[test]
-    fn test_valid_type_code() {
-        let Ok(frame) = RawFrame::from_hex("8D4840D6202CC371C32CE0576098") else {
-            return;
-        };
-        assert_eq!(frame.type_code(), 4);
-    }
+        assert_matches!(frame.bits(0, 5), Err(AdsbError::InvalidBitRange { .. }));
 
-    #[test]
-    fn test_extract_payload() {
-        let Ok(frame) = RawFrame::from_hex("8D4840D6202CC371C32CE0576098") else {
-            return;
-        };
-        assert_matches!(frame.payload(), &[0x20, 0x2C, 0xC3, 0x71, 0xC3, 0x2C, 0xE0]);
+        assert_matches!(frame.bits(1, 0), Err(AdsbError::InvalidBitRange { .. }));
+
+        assert_matches!(frame.bits(110, 5), Err(AdsbError::InvalidBitRange { .. }));
     }
 }
