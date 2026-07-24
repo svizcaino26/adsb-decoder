@@ -24,6 +24,9 @@ const FIELD_MESSAGE: RangeInclusive<u8> = 33..=88;
 /// ADS-B frames are 112 bits.
 /// Bit 1 is the most significant bit of the frame, following the ICAO specification.
 /// Internally the frame is stored in the lower 112 bits of a `u128`.
+/// # References
+/// - ICAO Annex 10, Volume IV
+/// - Junzi Sun, *The 1090 Megahertz Riddle* <https://mode-s.org/1090mhz/index.html>
 #[derive(Debug)]
 pub struct RawFrame {
     bits: u128,
@@ -32,6 +35,8 @@ pub struct RawFrame {
 impl RawFrame {
     /// Parses a 112-bit ADS-B frame from a hexadecimal string
     ///
+    /// The input must contain exactly 28 hexadecimal characters.
+    /// Optional dump1090 delimiters (`*` and `;`) are ignored.
     /// # Error
     /// - If the string is not 28 digits long.
     /// - If the string contains invalid hexadecimal characters.
