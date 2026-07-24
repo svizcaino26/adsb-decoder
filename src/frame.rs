@@ -5,6 +5,22 @@ use crate::error::AdsbError;
 const ADSB_FRAME_LENGTH: usize = 28;
 const ADSB_FRAME_BITS: u8 = 112;
 
+/// Below are common field constants to provide ergonomic field access.
+/// Downlink Format (DF)
+const FIELD_DOWNLINK_FORMAT: RangeInclusive<u8> = 1u8..=5u8;
+
+/// Transponder Capability (CA)
+const FIELD_CAPABILITY: RangeInclusive<u8> = 6u8..=8u8;
+
+/// ICAO Aircraft Address
+const FIELD_ICAO_ADDRESS: RangeInclusive<u8> = 9..=32;
+
+/// TypeCode(TC)
+const FIELD_TYPE_CODE: RangeInclusive<u8> = 33..=37;
+
+/// Message (ME)
+const FIELD_MESSAGE: RangeInclusive<u8> = 33..=88;
+
 /// ADS-B frames are 112 bits.
 /// Bit 1 is the most significant bit of the frame, following the ICAO specification.
 /// Internally the frame is stored in the lower 112 bits of a `u128`.
@@ -105,11 +121,11 @@ mod tests {
             panic!("failed to parse frame");
         };
 
-        assert_eq!(frame.bits(1, 5).unwrap(), 17); // DF
-        assert_eq!(frame.bits(6, 3).unwrap(), 5); // CA
-        assert_eq!(frame.bits(9, 24).unwrap(), 0x0048_40D6); // ICAO
-        assert_eq!(frame.bits(33, 5).unwrap(), 4); // Type Code
-        assert_eq!(frame.bits(33, 56).unwrap(), 0x0020_2CC3_71C3_2CE0); // Payload
+        assert_eq!(frame.bits(FIELD_DOWNLINK_FORMAT).unwrap(), 17); // DF
+        assert_eq!(frame.bits(FIELD_CAPABILITY).unwrap(), 5); // CA
+        assert_eq!(frame.bits(FIELD_ICAO_ADDRESS).unwrap(), 0x0048_40D6); // ICAO
+        assert_eq!(frame.bits(FIELD_TYPE_CODE).unwrap(), 4); // Type Code
+        assert_eq!(frame.bits(FIELD_MESSAGE).unwrap(), 0x0020_2CC3_71C3_2CE0); // Payload
     }
 
     #[test]
