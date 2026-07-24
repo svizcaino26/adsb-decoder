@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 use crate::error::AdsbError;
 
 const ADSB_FRAME_LENGTH: usize = 28;
@@ -37,34 +39,30 @@ impl RawFrame {
         Ok(Self { bits })
     }
 
-    /// Extracts a field from the ADS-B frame.
+    /// Extracts the field defined by the given inclusive bit range.
     ///
     /// Bit numbering follows the ICAO ADS-B specification:
     /// - Bit 1 is the most significant bit of the 112-bit frame.
     /// - Bit 112 is the least significant bit.
+    /// - The range must be between 1 and 112 (included)
     ///
     /// # Examples
     ///
     /// ```text
-    /// bits(1, 5)   -> Downlink Format (DF)
-    /// bits(6, 3)   -> Capability (CA)
-    /// bits(9, 24)  -> ICAO address
-    /// bits(33, 5)  -> Type Code
+    /// bits(1..=5)   -> Downlink Format (DF)
+    /// bits(6..=8)   -> Capability (CA)
+    /// bits(9..=32)  -> ICAO address
+    /// bits(33..=37)  -> Type Code
     /// ```
-    ///
-    /// # Error
-    /// - If either start or len are zero.
-    /// - If `(start + len - 1) > 112`.
-    pub const fn bits(&self, start: u8, len: u8) -> Result<u128, AdsbError> {
-        if start == 0 || len == 0 {
-            return Err(AdsbError::InvalidBitRange { start, len });
+    pub const fn bits(&self, range: RangeInclusive<u8>) -> Result<u128, AdsbError> {
+        let start = *range.start();
+        let end = *range.end();
+
+        if start == 0 || start > end || end > ADSB_FRAME_BITS {
+            return Err(AdsbError::InvalidBitRange(range));
         }
 
-        let end = start + len - 1;
-        if end > ADSB_FRAME_BITS {
-            return Err(AdsbError::InvalidBitRange { start, len });
-        }
-
+        let len = end - start + 1;
         let shift = ADSB_FRAME_BITS - end;
         let mask = (1u128 << len) - 1;
         Ok((self.bits >> shift) & mask)
@@ -119,10 +117,8 @@ mod tests {
     fn test_invalid_bit_range() {
         let frame = RawFrame::from_hex("8D4840D6202CC371C32CE0576098").unwrap();
 
-        assert_matches!(frame.bits(0, 5), Err(AdsbError::InvalidBitRange { .. }));
+        assert_matches!(frame.bits(0..=5), Err(AdsbError::InvalidBitRange { .. }));
 
-        assert_matches!(frame.bits(1, 0), Err(AdsbError::InvalidBitRange { .. }));
-
-        assert_matches!(frame.bits(110, 5), Err(AdsbError::InvalidBitRange { .. }));
+        assert_matches!(frame.bits(1..=113), Err(AdsbError::InvalidBitRange { .. }));
     }
 }

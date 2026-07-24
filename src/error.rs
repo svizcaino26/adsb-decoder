@@ -1,4 +1,4 @@
-use std::num::ParseIntError;
+use std::{num::ParseIntError, ops::RangeInclusive};
 
 use thiserror::Error;
 
@@ -13,6 +13,6 @@ pub enum AdsbError {
     #[error("not an ADS-B message: downlink format was {0}, expected 17")]
     NotAdsb(u8),
 
-    #[error("Invalid bit range start={start}, len={len}")]
-    InvalidBitRange { start: u8, len: u8 },
+    #[error("Invalid bit range: {0:?}")]
+    InvalidBitRange(RangeInclusive<u8>),
 }
