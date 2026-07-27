@@ -95,6 +95,13 @@ impl RawFrame {
             .try_into()
             .expect("24 bits always fit into u32")
     }
+
+    pub fn type_code(&self) -> u8 {
+        self.bits(FIELD_TYPE_CODE)
+            .expect("TypeCode range is always valid")
+            .try_into()
+            .expect("5 bit field fits into u8")
+    }
 }
 
 #[cfg(test)]
