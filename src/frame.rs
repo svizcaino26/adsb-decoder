@@ -88,6 +88,13 @@ impl RawFrame {
         let mask = (1u128 << len) - 1;
         Ok((self.bits >> shift) & mask)
     }
+
+    pub fn icao(&self) -> u32 {
+        self.bits(FIELD_ICAO_ADDRESS)
+            .expect("ICAO range is always valid")
+            .try_into()
+            .expect("24 bits always fit into u32")
+    }
 }
 
 #[cfg(test)]
