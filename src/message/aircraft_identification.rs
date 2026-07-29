@@ -4,11 +4,35 @@ use crate::{error::AdsbError, frame::RawFrame};
 
 const CHAR_MAP: &[u8; 64] = b"#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
 const FIELD_CALL_SIGN: RangeInclusive<u8> = 38u8..=88u8;
+const FIELD_CATEGORY: RangeInclusive<u8> = 38u8..=40u8;
 
-pub(crate) struct AircraftIdentification {
+pub struct AircraftIdentification {
     pub icao: u32,
     pub callsign: String,
-    pub category: u8,
+    pub category: AircraftCategory,
+}
+
+impl TryFrom<&RawFrame> for AircraftIdentification {
+    type Error = AdsbError;
+
+    fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
+        let type_code = frame.type_code();
+        let category: u8 = frame
+            .bits(FIELD_CATEGORY)?
+            .try_into()
+            .expect("resulting value is 3 bits");
+        Ok(Self {
+            icao: frame.icao(),
+            callsign: decode_callsign(frame),
+            category: AircraftCategory::try_from(AircraftCategoryCode {
+                type_code,
+                category,
+            })?,
+        })
+    }
+}
+
+#[derive(Debug)]
 pub enum AircraftCategory {
     Reserved(AircraftCategoryCode),
     UnknownCategory(AircraftCategoryCode),
