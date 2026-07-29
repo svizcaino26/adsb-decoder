@@ -1,11 +1,25 @@
+//! Decodes ADS-B Aircraft Identification messages (Type Codes 1–4).
+//!
+//! Aircraft Identification messages contain the aircraft callsign (e.g.
+//! `KLM1023`) together with an aircraft category.
+//!
+//! The implementation follows the ADS-B specification described in:
+//! - ICAO Annex 10, Volume IV
+//! - Junzi Sun, *The 1090 Megahertz Riddle*
+//!   <https://mode-s.org/1090mhz/content/ads-b/2-identification.html>
 use std::ops::RangeInclusive;
 
 use crate::{error::AdsbError, frame::RawFrame};
 
+/// Six-bit character lookup table defined by the ADS-B specification.
+///
+/// Each six-bit symbol indexes directly into this table to recover one
+/// callsign character.
 const CHAR_MAP: &[u8; 64] = b"#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
 const FIELD_CALL_SIGN: RangeInclusive<u8> = 41u8..=88u8;
 const FIELD_CATEGORY: RangeInclusive<u8> = 38u8..=40u8;
 
+/// Decoded ADS-B Aircraft Identification message.
 pub struct AircraftIdentification {
     pub icao: u32,
     pub callsign: String,
@@ -33,6 +47,7 @@ impl TryFrom<&RawFrame> for AircraftIdentification {
 }
 
 #[derive(Debug)]
+/// Aircraft category decoded from the Type Code and category bits.
 pub enum AircraftCategory {
     Reserved(AircraftCategoryCode),
     UnknownCategory(AircraftCategoryCode),
@@ -62,6 +77,7 @@ pub enum AircraftCategory {
 }
 
 #[derive(Debug)]
+/// Raw `(type_code, category)` pair used to decode an `AircraftCategory`.
 struct AircraftCategoryCode {
     type_code: u8,
     category: u8,
@@ -96,6 +112,10 @@ impl TryFrom<AircraftCategoryCode> for AircraftCategory {
 }
 
 #[allow(clippy::as_conversions, clippy::indexing_slicing)]
+/// Decodes the eight-character aircraft callsign from an ADS-B frame.
+///
+/// The callsign is encoded as eight six-bit symbols, each indexing into
+/// the ADS-B character lookup table. Trailing spaces are removed.
 fn decode_callsign(frame: &RawFrame) -> String {
     let mut callsign = String::with_capacity(8);
     let bits: u64 = frame
