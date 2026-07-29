@@ -4,11 +4,11 @@ mod aircraft_identification;
 
 use aircraft_identification::{AircraftCategory, AircraftIdentification};
 
-#[derive(Debug)]
 /// Represents a decoded ADS-B message.
 ///
 /// Each variant contains the strongly typed representation of a
 /// particular ADS-B message as defined by its Type Code (TC).
+#[derive(Debug)]
 enum Message {
     /// Aircraft Identification and Category (Type Codes 1–4).
     AircraftIdentification(AircraftIdentification),

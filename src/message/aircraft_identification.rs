@@ -27,8 +27,8 @@ const CALLSIGN_MASK: u64 = (CHAR_MAP_LENGTH as u64) - 1;
 const FIELD_CALL_SIGN: RangeInclusive<u8> = 41u8..=88u8;
 const FIELD_CATEGORY: RangeInclusive<u8> = 38u8..=40u8;
 
-#[derive(Debug, PartialEq)]
 /// Decoded ADS-B Aircraft Identification message.
+#[derive(Debug, PartialEq)]
 pub struct AircraftIdentification {
     pub icao: IcaoAddress,
     pub callsign: String,
@@ -56,8 +56,8 @@ impl TryFrom<&RawFrame> for AircraftIdentification {
     }
 }
 
-#[derive(Debug, PartialEq)]
 /// Aircraft category decoded from the Type Code and category bits.
+#[derive(Debug, PartialEq)]
 pub enum AircraftCategory {
     Reserved(AircraftCategoryCode),
     UnknownCategory(AircraftCategoryCode),
@@ -86,8 +86,8 @@ pub enum AircraftCategory {
     Rotorcraft,
 }
 
-#[derive(Debug, PartialEq)]
 /// Raw `(type_code, category)` pair used to decode an `AircraftCategory`.
+#[derive(Debug, PartialEq)]
 struct AircraftCategoryCode {
     type_code: TypeCode,
     category: u8,
@@ -121,11 +121,11 @@ impl TryFrom<AircraftCategoryCode> for AircraftCategory {
     }
 }
 
-#[allow(clippy::as_conversions, clippy::indexing_slicing)]
 /// Decodes the eight-character aircraft callsign from an ADS-B frame.
 ///
 /// The callsign is encoded as eight six-bit symbols, each indexing into
 /// the ADS-B character lookup table. Trailing spaces are removed.
+#[allow(clippy::as_conversions, clippy::indexing_slicing)]
 fn decode_callsign(frame: &RawFrame) -> String {
     let mut callsign = String::with_capacity(8);
     let bits: u64 = frame
