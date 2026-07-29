@@ -74,6 +74,22 @@ impl TryFrom<AircraftCategoryCode> for AircraftCategory {
         match (code.type_code, code.category) {
             (1, 1..=7) | (2, 4..=7) | (3, 5) => Ok(Self::Reserved(code)),
             (_, 0) => Ok(Self::NoCategoryInformation),
+            (2, 1) => Ok(Self::SurfaceEmergencyVehicle),
+            (2, 2) => Ok(Self::SurfaceServiceVehicle),
+            (2, 3) => Ok(Self::GroundObstruction),
+            (3, 1) => Ok(Self::Glider),
+            (3, 2) => Ok(Self::LighterThanAir),
+            (3, 3) => Ok(Self::Parachutist),
+            (3, 4) => Ok(Self::Ultralight),
+            (3, 6) => Ok(Self::UnmannedAerialVehicle),
+            (3, 7) => Ok(Self::SpaceVehicle),
+            (4, 1) => Ok(Self::Light),
+            (4, 2) => Ok(Self::Medium1),
+            (4, 3) => Ok(Self::Medium2),
+            (4, 4) => Ok(Self::HighVortex),
+            (4, 5) => Ok(Self::Heavy),
+            (4, 6) => Ok(Self::HighPerformance),
+            (4, 7) => Ok(Self::Rotorcraft),
             _ => Ok(Self::UnknownCategory(code)),
         }
     }
