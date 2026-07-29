@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use crate::{error::AdsbError, frame::RawFrame};
 
 const CHAR_MAP: &[u8; 64] = b"#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
-const FIELD_CALL_SIGN: RangeInclusive<u8> = 38u8..=88u8;
+const FIELD_CALL_SIGN: RangeInclusive<u8> = 41u8..=88u8;
 const FIELD_CATEGORY: RangeInclusive<u8> = 38u8..=40u8;
 
 pub struct AircraftIdentification {
