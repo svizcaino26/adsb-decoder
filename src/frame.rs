@@ -1,4 +1,4 @@
-use std::ops::RangeInclusive;
+use std::{fmt::Display, ops::RangeInclusive};
 
 use crate::error::AdsbError;
 
@@ -32,6 +32,12 @@ impl IcaoAddress {
 
     pub const fn value(self) -> u32 {
         self.0
+    }
+}
+
+impl Display for IcaoAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:06X}", self.value())
     }
 }
 
