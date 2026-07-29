@@ -4,13 +4,26 @@ mod aircraft_identification;
 
 use aircraft_identification::{AircraftCategory, AircraftIdentification};
 
+/// Represents a decoded ADS-B message.
+///
+/// Each variant contains the strongly typed representation of a
+/// particular ADS-B message as defined by its Type Code (TC).
 enum Message {
+    /// Aircraft Identification and Category (Type Codes 1–4).
     AircraftIdentification(AircraftIdentification),
 }
 
 impl TryFrom<&RawFrame> for Message {
     type Error = AdsbError;
 
+    /// Decodes a [`RawFrame`] into the corresponding ADS-B message.
+    ///
+    /// The message type is determined from the frame's Type Code.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AdsbError::UnsupportedTypeCode`] if the Type Code
+    /// has not yet been implemented.
     fn try_from(frame: &RawFrame) -> Result<Self, AdsbError> {
         match frame.type_code() {
             1..=4 => Ok(Self::AircraftIdentification(
