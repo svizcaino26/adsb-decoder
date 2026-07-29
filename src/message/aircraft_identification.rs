@@ -9,8 +9,36 @@ pub(crate) struct AircraftIdentification {
     pub icao: u32,
     pub callsign: String,
     pub category: u8,
+pub enum AircraftCategory {
+    Reserved(AircraftCategoryCode),
+    UnknownCategory(AircraftCategoryCode),
+    NoCategoryInformation,
+
+    // TC = 2
+    SurfaceEmergencyVehicle,
+    SurfaceServiceVehicle,
+    GroundObstruction,
+
+    // TC = 3
+    Glider,
+    LighterThanAir,
+    Parachutist,
+    Ultralight,
+    UnmannedAerialVehicle,
+    SpaceVehicle,
+
+    // TC = 4
+    Light,
+    Medium1,
+    Medium2,
+    HighVortex,
+    Heavy,
+    HighPerformance,
+    Rotorcraft,
 }
 #[allow(clippy::expect_used, clippy::as_conversions, clippy::indexing_slicing)]
+
+#[derive(Debug)]
 fn decode_callsign(frame: &RawFrame) -> String {
     let mut callsign = String::with_capacity(8);
     let mut bits: u64 = frame
