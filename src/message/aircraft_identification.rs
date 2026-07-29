@@ -39,9 +39,10 @@ pub enum AircraftCategory {
 #[allow(clippy::expect_used, clippy::as_conversions, clippy::indexing_slicing)]
 
 #[derive(Debug)]
+#[allow(clippy::as_conversions, clippy::indexing_slicing)]
 fn decode_callsign(frame: &RawFrame) -> String {
     let mut callsign = String::with_capacity(8);
-    let mut bits: u64 = frame
+    let bits: u64 = frame
         .bits(FIELD_CALL_SIGN)
         .expect("Callsign range is always valid")
         .try_into()
@@ -50,6 +51,12 @@ fn decode_callsign(frame: &RawFrame) -> String {
     for shift in (0..48).step_by(6).rev() {
         let index = ((bits >> shift) & 0x3F) as usize;
         callsign.push(char::from(CHAR_MAP[index]));
+    }
+
+    // this clears trailing spaces in place without
+    // having to trim and then convert back to a String
+    while callsign.ends_with(' ') {
+        callsign.pop();
     }
 
     callsign
