@@ -21,6 +21,20 @@ const FIELD_TYPE_CODE: RangeInclusive<u8> = 33..=37;
 /// Message (ME)
 const FIELD_MESSAGE: RangeInclusive<u8> = 33..=88;
 
+/// Unique aircraft identifier contained in frame bits 9 - 32
+#[derive(Debug, PartialEq, Eq, Copy, Hash, Clone)]
+pub struct IcaoAddress(u32);
+
+impl IcaoAddress {
+    pub const fn new(value: u32) -> Self {
+        Self(value)
+    }
+
+    pub const fn value(self) -> u32 {
+        self.0
+    }
+}
+
 /// ADS-B frames are 112 bits.
 /// Bit 1 is the most significant bit of the frame, following the ICAO specification.
 /// Internally the frame is stored in the lower 112 bits of a `u128`.
@@ -89,11 +103,14 @@ impl RawFrame {
         Ok((self.bits >> shift) & mask)
     }
 
-    pub fn icao(&self) -> u32 {
-        self.bits(FIELD_ICAO_ADDRESS)
-            .expect("ICAO range is always valid")
-            .try_into()
-            .expect("24 bits always fit into u32")
+    #[allow(clippy::expect_used)]
+    pub fn icao(&self) -> IcaoAddress {
+        IcaoAddress(
+            self.bits(FIELD_ICAO_ADDRESS)
+                .expect("ICAO range is always valid")
+                .try_into()
+                .expect("24 bits always fit into u32"),
+        )
     }
 
     pub fn type_code(&self) -> u8 {

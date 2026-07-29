@@ -9,7 +9,10 @@
 //!   <https://mode-s.org/1090mhz/content/ads-b/2-identification.html>
 use std::ops::RangeInclusive;
 
-use crate::{error::AdsbError, frame::RawFrame};
+use crate::{
+    error::AdsbError,
+    frame::{IcaoAddress, RawFrame},
+};
 
 const CALLSIGN_BITS: u8 = 6;
 const CHAR_MAP_LENGTH: usize = 1usize << CALLSIGN_BITS;
@@ -24,10 +27,10 @@ const CALLSIGN_MASK: u64 = (CHAR_MAP_LENGTH as u64) - 1;
 const FIELD_CALL_SIGN: RangeInclusive<u8> = 41u8..=88u8;
 const FIELD_CATEGORY: RangeInclusive<u8> = 38u8..=40u8;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 /// Decoded ADS-B Aircraft Identification message.
 pub struct AircraftIdentification {
-    pub icao: u32,
+    pub icao: IcaoAddress,
     pub callsign: String,
     pub category: AircraftCategory,
 }
@@ -52,7 +55,7 @@ impl TryFrom<&RawFrame> for AircraftIdentification {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 /// Aircraft category decoded from the Type Code and category bits.
 pub enum AircraftCategory {
     Reserved(AircraftCategoryCode),
@@ -82,7 +85,7 @@ pub enum AircraftCategory {
     Rotorcraft,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 /// Raw `(type_code, category)` pair used to decode an `AircraftCategory`.
 struct AircraftCategoryCode {
     type_code: u8,

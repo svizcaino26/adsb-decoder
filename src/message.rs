@@ -4,6 +4,7 @@ mod aircraft_identification;
 
 use aircraft_identification::{AircraftCategory, AircraftIdentification};
 
+#[derive(Debug)]
 /// Represents a decoded ADS-B message.
 ///
 /// Each variant contains the strongly typed representation of a
@@ -36,18 +37,20 @@ impl TryFrom<&RawFrame> for Message {
 
 #[cfg(test)]
 mod tests {
+    use crate::frame;
+
     use super::*;
     use std::assert_matches;
 
     #[test]
     #[allow(clippy::unwrap_used)]
-    fn decode_callsign() {
+    fn decode_aircraft_identification() {
         let frame = RawFrame::from_hex("8D4840D6202CC371C32CE0576098").unwrap();
         let message = Message::try_from(&frame).unwrap();
 
         match message {
             Message::AircraftIdentification(msg) => {
-                assert_eq!(msg.icao, 0x48_40D6);
+                assert_eq!(msg.icao, frame::IcaoAddress::new(0x48_40D6));
                 assert_eq!(msg.callsign, "KLM1023");
                 assert_matches!(msg.category, AircraftCategory::NoCategoryInformation);
             }
