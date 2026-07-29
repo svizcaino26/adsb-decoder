@@ -36,9 +36,25 @@ pub enum AircraftCategory {
     HighPerformance,
     Rotorcraft,
 }
-#[allow(clippy::expect_used, clippy::as_conversions, clippy::indexing_slicing)]
 
 #[derive(Debug)]
+struct AircraftCategoryCode {
+    type_code: u8,
+    category: u8,
+}
+
+impl TryFrom<AircraftCategoryCode> for AircraftCategory {
+    type Error = AdsbError;
+
+    fn try_from(code: AircraftCategoryCode) -> Result<Self, Self::Error> {
+        match (code.type_code, code.category) {
+            (1, 1..=7) | (2, 4..=7) | (3, 5) => Ok(Self::Reserved(code)),
+            (_, 0) => Ok(Self::NoCategoryInformation),
+            _ => Ok(Self::UnknownCategory(code)),
+        }
+    }
+}
+
 #[allow(clippy::as_conversions, clippy::indexing_slicing)]
 fn decode_callsign(frame: &RawFrame) -> String {
     let mut callsign = String::with_capacity(8);
