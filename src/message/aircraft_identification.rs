@@ -11,14 +11,20 @@ use std::ops::RangeInclusive;
 
 use crate::{error::AdsbError, frame::RawFrame};
 
+const CALLSIGN_BITS: u8 = 6;
+const CHAR_MAP_LENGTH: usize = 1usize << CALLSIGN_BITS;
 /// Six-bit character lookup table defined by the ADS-B specification.
 ///
 /// Each six-bit symbol indexes directly into this table to recover one
 /// callsign character.
-const CHAR_MAP: &[u8; 64] = b"#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
+const CHAR_MAP: &[u8; CHAR_MAP_LENGTH] =
+    b"#ABCDEFGHIJKLMNOPQRSTUVWXYZ##### ###############0123456789######";
+#[allow(clippy::as_conversions)]
+const CALLSIGN_MASK: u64 = (CHAR_MAP_LENGTH as u64) - 1;
 const FIELD_CALL_SIGN: RangeInclusive<u8> = 41u8..=88u8;
 const FIELD_CATEGORY: RangeInclusive<u8> = 38u8..=40u8;
 
+#[derive(Debug)]
 /// Decoded ADS-B Aircraft Identification message.
 pub struct AircraftIdentification {
     pub icao: u32,
@@ -125,7 +131,7 @@ fn decode_callsign(frame: &RawFrame) -> String {
         .expect("48 bit field fits in u64");
 
     for shift in (0..48).step_by(6).rev() {
-        let index = ((bits >> shift) & 0x3F) as usize;
+        let index = ((bits >> shift) & CALLSIGN_MASK) as usize;
         callsign.push(char::from(CHAR_MAP[index]));
     }
 
