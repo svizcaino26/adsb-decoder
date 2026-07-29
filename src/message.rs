@@ -26,7 +26,7 @@ impl TryFrom<&RawFrame> for Message {
     /// Returns [`AdsbError::UnsupportedTypeCode`] if the Type Code
     /// has not yet been implemented.
     fn try_from(frame: &RawFrame) -> Result<Self, AdsbError> {
-        match frame.type_code() {
+        match frame.type_code().value() {
             1..=4 => Ok(Self::AircraftIdentification(
                 AircraftIdentification::try_from(frame)?,
             )),

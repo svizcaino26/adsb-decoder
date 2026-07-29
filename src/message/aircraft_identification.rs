@@ -11,7 +11,7 @@ use std::ops::RangeInclusive;
 
 use crate::{
     error::AdsbError,
-    frame::{IcaoAddress, RawFrame},
+    frame::{IcaoAddress, RawFrame, TypeCode},
 };
 
 const CALLSIGN_BITS: u8 = 6;
@@ -44,6 +44,7 @@ impl TryFrom<&RawFrame> for AircraftIdentification {
             .bits(FIELD_CATEGORY)?
             .try_into()
             .expect("resulting value is 3 bits");
+
         Ok(Self {
             icao: frame.icao(),
             callsign: decode_callsign(frame),
@@ -88,7 +89,7 @@ pub enum AircraftCategory {
 #[derive(Debug, PartialEq)]
 /// Raw `(type_code, category)` pair used to decode an `AircraftCategory`.
 struct AircraftCategoryCode {
-    type_code: u8,
+    type_code: TypeCode,
     category: u8,
 }
 
@@ -96,7 +97,7 @@ impl TryFrom<AircraftCategoryCode> for AircraftCategory {
     type Error = AdsbError;
 
     fn try_from(code: AircraftCategoryCode) -> Result<Self, Self::Error> {
-        match (code.type_code, code.category) {
+        match (code.type_code.value(), code.category) {
             (1, 1..=7) | (2, 4..=7) | (3, 5) => Ok(Self::Reserved(code)),
             (_, 0) => Ok(Self::NoCategoryInformation),
             (2, 1) => Ok(Self::SurfaceEmergencyVehicle),

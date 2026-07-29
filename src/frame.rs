@@ -41,6 +41,20 @@ impl Display for IcaoAddress {
     }
 }
 
+/// ADS-B Type Code (TC) contained in frame bits 33–37.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct TypeCode(u8);
+
+impl TypeCode {
+    pub const fn new(value: u8) -> Self {
+        Self(value)
+    }
+
+    pub const fn value(self) -> u8 {
+        self.0
+    }
+}
+
 /// ADS-B frames are 112 bits.
 /// Bit 1 is the most significant bit of the frame, following the ICAO specification.
 /// Internally the frame is stored in the lower 112 bits of a `u128`.
@@ -111,7 +125,7 @@ impl RawFrame {
 
     #[allow(clippy::expect_used)]
     pub fn icao(&self) -> IcaoAddress {
-        IcaoAddress(
+        IcaoAddress::new(
             self.bits(FIELD_ICAO_ADDRESS)
                 .expect("ICAO range is always valid")
                 .try_into()
@@ -119,11 +133,13 @@ impl RawFrame {
         )
     }
 
-    pub fn type_code(&self) -> u8 {
-        self.bits(FIELD_TYPE_CODE)
-            .expect("TypeCode range is always valid")
-            .try_into()
-            .expect("5 bit field fits into u8")
+    pub fn type_code(&self) -> TypeCode {
+        TypeCode::new(
+            self.bits(FIELD_TYPE_CODE)
+                .expect("TypeCode range is always valid")
+                .try_into()
+                .expect("5 bit field fits into u8"),
+        )
     }
 }
 
