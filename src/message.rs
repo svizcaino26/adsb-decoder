@@ -1,7 +1,9 @@
 use crate::{error::AdsbError, frame::RawFrame};
 
+mod airborne_velocity;
 mod aircraft_identification;
 
+use airborne_velocity::AirborneVelocity;
 use aircraft_identification::{AircraftCategory, AircraftIdentification};
 
 /// Represents a decoded ADS-B message.
@@ -12,6 +14,7 @@ use aircraft_identification::{AircraftCategory, AircraftIdentification};
 enum Message {
     /// Aircraft Identification and Category (Type Codes 1–4).
     AircraftIdentification(AircraftIdentification),
+    AirborneVelocity(AirborneVelocity),
 }
 
 impl TryFrom<&RawFrame> for Message {
@@ -30,6 +33,7 @@ impl TryFrom<&RawFrame> for Message {
             1..=4 => Ok(Self::AircraftIdentification(
                 AircraftIdentification::try_from(frame)?,
             )),
+            19 => Ok(Self::AirborneVelocity(AirborneVelocity::try_from(frame)?)),
             tc => Err(AdsbError::UnsupportedTypeCode(tc)),
         }
     }
@@ -54,6 +58,7 @@ mod tests {
                 assert_eq!(msg.callsign, "KLM1023");
                 assert_matches!(msg.category, AircraftCategory::NoCategoryInformation);
             }
+            Message::AirborneVelocity(msg) => todo!(),
         }
     }
 }
