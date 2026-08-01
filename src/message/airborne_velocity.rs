@@ -6,6 +6,30 @@ use crate::{
 };
 
 const FIELD_SUBTYPE: RangeInclusive<u8> = 38u8..=40u8;
+// const EAST_WEST_VELOCITY_
+
+#[derive(Debug)]
+pub enum SubType {
+    GroundSubSonic,
+    GroundSuperSonic,
+    AirSubSonic,
+    AirSuperSonic,
+    UnknownSubType,
+}
+
+impl TryFrom<&RawFrame> for SubType {
+    type Error = AdsbError;
+
+    fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
+        match frame.bits(FIELD_SUBTYPE)? {
+            1 => Ok(Self::GroundSubSonic),
+            2 => Ok(Self::GroundSuperSonic),
+            3 => Ok(Self::AirSubSonic),
+            4 => Ok(Self::AirSuperSonic),
+            _ => Ok(Self::UnknownSubType),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum Velocity {
@@ -23,6 +47,7 @@ pub enum Velocity {
 #[derive(Debug)]
 pub struct AirborneVelocity {
     pub icao: IcaoAddress,
+    pub subtype: SubType,
     pub intent_change: bool,
     pub ifr_capability: bool,
     pub velocity: Velocity,
