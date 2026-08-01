@@ -1,7 +1,24 @@
+use std::ops::RangeInclusive;
+
 use crate::{
     error::AdsbError,
     frame::{IcaoAddress, RawFrame},
 };
+
+const FIELD_SUBTYPE: RangeInclusive<u8> = 38u8..=40u8;
+
+#[derive(Debug)]
+pub enum Velocity {
+    GroundSpeed {
+        east_west: i16,
+        north_south: i16,
+    },
+    AirSpeed {
+        heading: f64,
+        airspeed: u16,
+        is_true_airspeed: bool,
+    },
+}
 
 #[derive(Debug)]
 pub struct AirborneVelocity {
