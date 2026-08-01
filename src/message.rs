@@ -52,13 +52,13 @@ mod tests {
         let frame = RawFrame::from_hex("8D4840D6202CC371C32CE0576098").unwrap();
         let message = Message::try_from(&frame).unwrap();
 
-        match message {
-            Message::AircraftIdentification(msg) => {
-                assert_eq!(msg.icao, frame::IcaoAddress::new(0x48_40D6));
-                assert_eq!(msg.callsign, "KLM1023");
-                assert_matches!(msg.category, AircraftCategory::NoCategoryInformation);
-            }
-            Message::AirborneVelocity(msg) => todo!(),
-        }
+        let Message::AircraftIdentification(msg) = message else {
+            panic!("expected Aircraft Identification ADS-B frame");
+        };
+
+        assert_eq!(msg.icao, frame::IcaoAddress::new(0x48_40D6));
+        assert_eq!(msg.callsign, "KLM1023");
+        assert_matches!(msg.category, AircraftCategory::NoCategoryInformation);
+    }
     }
 }
