@@ -3,7 +3,7 @@ use crate::{error::AdsbError, frame::RawFrame};
 mod airborne_velocity;
 mod aircraft_identification;
 
-use airborne_velocity::AirborneVelocity;
+use airborne_velocity::{AirborneVelocity, Velocity};
 use aircraft_identification::{AircraftCategory, AircraftIdentification};
 
 /// Represents a decoded ADS-B message.
@@ -60,5 +60,27 @@ mod tests {
         assert_eq!(msg.callsign, "KLM1023");
         assert_matches!(msg.category, AircraftCategory::NoCategoryInformation);
     }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn decode_ground_velocity() {
+        let frame = RawFrame::from_hex("8D485020994409940838175B284F").unwrap();
+        let message = Message::try_from(&frame).unwrap();
+
+        let Message::AirborneVelocity(msg) = message else {
+            panic!("expected Airborne Velocity ADS-B frame");
+        };
+
+        let Velocity::GroundSpeed {
+            east_west,
+            north_south,
+        } = msg.velocity
+        else {
+            panic!("expected Ground Speed encoded message");
+        };
+
+        assert_eq!((east_west, north_south), (-8, -159));
+
+        assert_eq!(msg.vertical_rate, -832);
     }
 }
