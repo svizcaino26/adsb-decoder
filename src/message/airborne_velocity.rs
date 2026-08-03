@@ -6,7 +6,10 @@ use crate::{
 };
 
 const FIELD_SUBTYPE: RangeInclusive<u8> = 38u8..=40u8;
-// const EAST_WEST_VELOCITY_
+const FIELD_EAST_WEST_VELOCITY: RangeInclusive<u8> = 47u8..=56u8;
+const FIELD_NORTH_SOUTH_VELOCITY: RangeInclusive<u8> = 58u8..=67u8;
+const FIELD_HDG: RangeInclusive<u8> = 47u8..=56u8;
+const FIELD_AIRSPEED: RangeInclusive<u8> = 58u8..=67u8;
 
 #[derive(Debug)]
 pub enum SubType {
@@ -55,6 +58,90 @@ pub enum Velocity {
         airspeed: Option<i16>,
         is_true_airspeed: bool,
     },
+}
+
+impl TryFrom<&RawFrame> for Velocity {
+    type Error = AdsbError;
+
+    fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
+        let st = SubType::try_from(frame)?;
+
+        match st {
+            SubType::GroundSubSonic | SubType::GroundSuperSonic => {
+                let d_ew = if let Ok(0) = frame.bits(46..=46) {
+                    1
+                } else {
+                    -1
+                };
+                let d_ns = if let Ok(0) = frame.bits(57..=57) {
+                    1
+                } else {
+                    -1
+                };
+                let multiplier = st.multiplier();
+
+                let v_ew: i16 = frame
+                    .bits(FIELD_EAST_WEST_VELOCITY)?
+                    .try_into()
+                    .expect("10 bits encoded value");
+                let v_x = if let 0 = v_ew {
+                    None
+                } else {
+                    Some(d_ew * multiplier * (v_ew - 1))
+                };
+
+                let v_ns: i16 = frame
+                    .bits(FIELD_NORTH_SOUTH_VELOCITY)?
+                    .try_into()
+                    .expect("10 bit encoded value");
+                let v_y = if let 0 = v_ns {
+                    None
+                } else {
+                    Some(d_ns * multiplier * (v_ns - 1))
+                };
+
+                Ok(Self::GroundSpeed {
+                    east_west: v_x,
+                    north_south: v_y,
+                })
+            }
+            SubType::AirSubSonic | SubType::AirSuperSonic => {
+                let is_true_airspeed = if let Ok(1) = frame.bits(57..=57) {
+                    true
+                } else {
+                    false
+                };
+                let heading = if let Ok(0) = frame.bits(46..=46) {
+                    None
+                } else {
+                    let hdg: i16 = frame
+                        .bits(FIELD_HDG)?
+                        .try_into()
+                        .expect("10 bit encoded value");
+                    let heading: f64 = hdg as f64 * 360.0 / 10244.0;
+                    Some(heading)
+                };
+
+                let airspeed: i16 = frame
+                    .bits(FIELD_AIRSPEED)?
+                    .try_into()
+                    .expect("10 bit encoded value");
+                let airspeed = if let 0 = airspeed {
+                    None
+                } else {
+                    let multiplier = st.multiplier();
+                    let airspeed = multiplier * (airspeed - 1);
+                    Some(airspeed)
+                };
+
+                Ok(Self::AirSpeed {
+                    heading,
+                    airspeed,
+                    is_true_airspeed,
+                })
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
