@@ -1,4 +1,4 @@
-use std::ops::RangeInclusive;
+use std::{fmt::Display, ops::RangeInclusive};
 
 use crate::{
     error::AdsbError,
@@ -10,6 +10,8 @@ const FIELD_EAST_WEST_VELOCITY: RangeInclusive<u8> = 47u8..=56u8;
 const FIELD_NORTH_SOUTH_VELOCITY: RangeInclusive<u8> = 58u8..=67u8;
 const FIELD_HDG: RangeInclusive<u8> = 47u8..=56u8;
 const FIELD_AIRSPEED: RangeInclusive<u8> = 58u8..=67u8;
+const FIELD_VERTICAL_RATE_SIGN: RangeInclusive<u8> = 69u8..=69u8;
+const FIELD_VERTICAL_RATE: RangeInclusive<u8> = 70u8..=78u8;
 
 #[derive(Debug)]
 pub enum SubType {
@@ -144,14 +146,58 @@ impl TryFrom<&RawFrame> for Velocity {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum VerticalRate {
+    Ascending(i16),
+    Descending(i16),
+    Unavailable,
+}
+
+impl TryFrom<&RawFrame> for VerticalRate {
+    type Error = AdsbError;
+    fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
+        let vertical_rate: i16 = frame
+            .bits(FIELD_VERTICAL_RATE)?
+            .try_into()
+            .expect("8 bit encoded field");
+
+        if vertical_rate == 0 {
+            Ok(Self::Unavailable)
+        } else if frame.bits(FIELD_VERTICAL_RATE_SIGN)? == 0 {
+            Ok(Self::Ascending(Self::decode_rate(vertical_rate)))
+        } else {
+            Ok(Self::Descending(Self::decode_rate(vertical_rate)))
+        }
+    }
+}
+
+impl VerticalRate {
+    pub fn decode_rate(vertical_rate: i16) -> i16 {
+        64 * (vertical_rate - 1)
+    }
+}
+
+impl Display for VerticalRate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Ascending(value) => {
+                write!(f, "{}", value)
+            }
+            Self::Descending(value) => {
+                write!(f, "-{}", value)
+            }
+            Self::Unavailable => write!(f, "Unavailable"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct AirborneVelocity {
     pub icao: IcaoAddress,
-    pub subtype: SubType,
     pub intent_change: bool,
     pub ifr_capability: bool,
     pub velocity: Velocity,
-    pub vertical_rate: i16,
+    pub vertical_rate: VerticalRate,
     pub geo_minus_baro: i16,
 }
 
@@ -159,6 +205,19 @@ impl TryFrom<&RawFrame> for AirborneVelocity {
     type Error = AdsbError;
 
     fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
-        Ok(Self { icao: frame.icao() })
+        let intent_change = frame.bits(41..=41)? == 1;
+
+        let ifr_capability = frame.bits(42..=42)? == 1;
+
+        let velocity = Velocity::try_from(frame)?;
+
+        let vertical_rate = VerticalRate::try_from(frame)?;
+        Ok(Self {
+            icao: frame.icao(),
+            intent_change,
+            ifr_capability,
+            velocity,
+            vertical_rate,
+        })
     }
 }

@@ -41,7 +41,7 @@ impl TryFrom<&RawFrame> for Message {
 
 #[cfg(test)]
 mod tests {
-    use crate::frame;
+    use crate::{frame, message::airborne_velocity::VerticalRate};
 
     use super::*;
     use std::assert_matches;
@@ -79,8 +79,8 @@ mod tests {
             panic!("expected Ground Speed encoded message");
         };
 
-        assert_eq!((east_west, north_south), (-8, -159));
+        assert_eq!((east_west, north_south), (Some(-8), Some(-159)));
 
-        assert_eq!(msg.vertical_rate, -832);
+        assert_eq!(msg.vertical_rate, VerticalRate::Descending(832));
     }
 }
