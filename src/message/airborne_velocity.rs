@@ -21,12 +21,26 @@ impl TryFrom<&RawFrame> for SubType {
     type Error = AdsbError;
 
     fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
-        match frame.bits(FIELD_SUBTYPE)? {
+        let st: u8 = frame
+            .bits(FIELD_SUBTYPE)?
+            .try_into()
+            .expect("resulting value is 3 bit encoded");
+
+        match st {
             1 => Ok(Self::GroundSubSonic),
             2 => Ok(Self::GroundSuperSonic),
             3 => Ok(Self::AirSubSonic),
             4 => Ok(Self::AirSuperSonic),
-            _ => Ok(Self::UnknownSubType),
+            st => Err(AdsbError::InvalidVelocitySubType(st)),
+        }
+    }
+}
+
+impl SubType {
+    fn multiplier(self) -> i16 {
+        match self {
+            Self::GroundSubSonic | Self::AirSubSonic => 1,
+            Self::GroundSuperSonic | Self::AirSuperSonic => 4,
         }
     }
 }
