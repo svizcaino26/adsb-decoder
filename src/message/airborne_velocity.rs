@@ -14,7 +14,6 @@ pub enum SubType {
     GroundSuperSonic,
     AirSubSonic,
     AirSuperSonic,
-    UnknownSubType,
 }
 
 impl TryFrom<&RawFrame> for SubType {
