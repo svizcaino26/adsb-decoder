@@ -47,12 +47,12 @@ impl SubType {
 #[derive(Debug)]
 pub enum Velocity {
     GroundSpeed {
-        east_west: i16,
-        north_south: i16,
+        east_west: Option<i16>,
+        north_south: Option<i16>,
     },
     AirSpeed {
-        heading: f64,
-        airspeed: u16,
+        heading: Option<f64>,
+        airspeed: Option<i16>,
         is_true_airspeed: bool,
     },
 }
