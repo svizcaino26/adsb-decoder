@@ -18,4 +18,7 @@ pub enum AdsbError {
 
     #[error("Unsupported type code: {0}")]
     UnsupportedTypeCode(u8),
+
+    #[error("Invalid velocity subtype: {0}")]
+    InvalidVelocitySubType(u8),
 }
