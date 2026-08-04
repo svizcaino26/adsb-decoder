@@ -6,7 +6,9 @@ use crate::{
 };
 
 const FIELD_SUBTYPE: RangeInclusive<u8> = 38u8..=40u8;
+const EAST_WEST_VELOCITY_SIGN: RangeInclusive<u8> = 46u8..=46u8;
 const FIELD_EAST_WEST_VELOCITY: RangeInclusive<u8> = 47u8..=56u8;
+const NORTH_SOUTH_VELOCITY_SIGN: RangeInclusive<u8> = 57u8..=57u8;
 const FIELD_NORTH_SOUTH_VELOCITY: RangeInclusive<u8> = 58u8..=67u8;
 const FIELD_HDG: RangeInclusive<u8> = 47u8..=56u8;
 const FIELD_AIRSPEED: RangeInclusive<u8> = 58u8..=67u8;
@@ -93,41 +95,49 @@ impl TryFrom<&RawFrame> for Velocity {
 
         match st {
             SubType::GroundSubSonic | SubType::GroundSuperSonic => {
-                let d_ew = if let Ok(0) = frame.bits(46..=46) {
-                    1
-                } else {
-                    -1
-                };
-                let d_ns = if let Ok(0) = frame.bits(57..=57) {
-                    1
-                } else {
-                    -1
-                };
                 let multiplier = st.multiplier();
 
-                let v_ew: i16 = frame
+                let east_west_vector: i16 = frame
                     .bits(FIELD_EAST_WEST_VELOCITY)?
                     .try_into()
-                    .expect("10 bits encoded value");
-                let v_x = if let 0 = v_ew {
-                    None
+                    .expect("10 bit encoded value fits in i16");
+
+                let east_west_speed = if east_west_vector == 0 {
+                    EastWestVelocity::Unavailable
+                } else if frame.bits(EAST_WEST_VELOCITY_SIGN)? == 0 {
+                    EastWestVelocity::East(Self::decode_ground_component(
+                        east_west_vector,
+                        multiplier,
+                    ))
                 } else {
-                    Some(d_ew * multiplier * (v_ew - 1))
+                    EastWestVelocity::West(Self::decode_ground_component(
+                        east_west_vector,
+                        multiplier,
+                    ))
                 };
 
-                let v_ns: i16 = frame
+                let north_south_vector: i16 = frame
                     .bits(FIELD_NORTH_SOUTH_VELOCITY)?
                     .try_into()
-                    .expect("10 bit encoded value");
-                let v_y = if let 0 = v_ns {
-                    None
+                    .expect("10 bit encoded value fits in i16");
+
+                let north_south_speed = if north_south_vector == 0 {
+                    NorthSouthVelocity::Unavailable
+                } else if frame.bits(NORTH_SOUTH_VELOCITY_SIGN)? == 0 {
+                    NorthSouthVelocity::North(Self::decode_ground_component(
+                        north_south_vector,
+                        multiplier,
+                    ))
                 } else {
-                    Some(d_ns * multiplier * (v_ns - 1))
+                    NorthSouthVelocity::South(Self::decode_ground_component(
+                        north_south_vector,
+                        multiplier,
+                    ))
                 };
 
                 Ok(Self::GroundSpeed {
-                    east_west: v_x,
-                    north_south: v_y,
+                    east_west: east_west_speed,
+                    north_south: north_south_speed,
                 })
             }
             SubType::AirSubSonic | SubType::AirSuperSonic => {

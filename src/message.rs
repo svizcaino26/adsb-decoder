@@ -43,7 +43,9 @@ impl TryFrom<&RawFrame> for Message {
 mod tests {
     use crate::{
         frame,
-        message::airborne_velocity::{GeometriAltitudeDelta, VerticalRate},
+        message::airborne_velocity::{
+            EastWestVelocity, GeometriAltitudeDelta, NorthSouthVelocity, VerticalRate,
+        },
     };
 
     use super::*;
@@ -82,7 +84,10 @@ mod tests {
             panic!("expected Ground Speed encoded message");
         };
 
-        assert_eq!((east_west, north_south), (Some(-8), Some(-159)));
+        assert_eq!(
+            (east_west, north_south),
+            (EastWestVelocity::West(8), NorthSouthVelocity::South(159))
+        );
         assert_eq!(msg.vertical_rate, VerticalRate::Descending(832));
         assert_eq!(msg.geo_minus_baro, GeometriAltitudeDelta::Above(550));
     }
