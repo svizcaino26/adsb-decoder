@@ -196,39 +196,31 @@ impl TryFrom<&RawFrame> for Velocity {
                 })
             }
             SubType::AirSubSonic | SubType::AirSuperSonic => {
-                let is_true_airspeed = if let Ok(1) = frame.bits(57..=57) {
-                    true
+                let multiplier = st.multiplier();
+
+                let heading = if frame.bits(MAGNETIC_HEADING_STATUS)? == 0 {
+                    MagneticHeading::Unavailable
                 } else {
-                    false
-                };
-                let heading = if let Ok(0) = frame.bits(46..=46) {
-                    None
-                } else {
-                    let hdg: i16 = frame
-                        .bits(FIELD_HDG)?
-                        .try_into()
-                        .expect("10 bit encoded value");
-                    let heading: f64 = hdg as f64 * 360.0 / 10244.0;
-                    Some(heading)
+                    // heading here is a 10 bit encoded value, will always fit in an f64 so the conversion is safe.
+                    #[allow(clippy::as_conversions, clippy::cast_precision_loss)]
+                    let heading = frame.bits(FIELD_MAGNETIC_HEADING)? as f64;
+                    MagneticHeading::Available(Self::decode_magnetic_heading(heading))
                 };
 
                 let airspeed: i16 = frame
                     .bits(FIELD_AIRSPEED)?
                     .try_into()
                     .expect("10 bit encoded value");
-                let airspeed = if let 0 = airspeed {
-                    None
+
+                let airspeed = if airspeed == 0 {
+                    AirSpeed::Unavailable
+                } else if frame.bits(AIRSPEED_TYPE)? == 0 {
+                    AirSpeed::IndicatedAirSpeed(Self::decode_speed_value(airspeed, multiplier))
                 } else {
-                    let multiplier = st.multiplier();
-                    let airspeed = multiplier * (airspeed - 1);
-                    Some(airspeed)
+                    AirSpeed::TrueAirSpeed(Self::decode_speed_value(airspeed, multiplier))
                 };
 
-                Ok(Self::AirSpeed {
-                    heading,
-                    airspeed,
-                    is_true_airspeed,
-                })
+                Ok(Self::AirSpeed { heading, airspeed })
             }
         }
     }
