@@ -41,7 +41,10 @@ impl TryFrom<&RawFrame> for Message {
 
 #[cfg(test)]
 mod tests {
-    use crate::{frame, message::airborne_velocity::VerticalRate};
+    use crate::{
+        frame,
+        message::airborne_velocity::{GeometriAltitudeDelta, VerticalRate},
+    };
 
     use super::*;
     use std::assert_matches;
@@ -80,7 +83,7 @@ mod tests {
         };
 
         assert_eq!((east_west, north_south), (Some(-8), Some(-159)));
-
         assert_eq!(msg.vertical_rate, VerticalRate::Descending(832));
+        assert_eq!(msg.geo_minus_baro, GeometriAltitudeDelta::Above(550));
     }
 }
