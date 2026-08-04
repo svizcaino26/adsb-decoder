@@ -41,7 +41,7 @@ impl TryFrom<&RawFrame> for SubType {
 }
 
 impl SubType {
-    fn multiplier(self) -> i16 {
+    const fn multiplier(self) -> i16 {
         match self {
             Self::GroundSubSonic | Self::AirSubSonic => 1,
             Self::GroundSuperSonic | Self::AirSuperSonic => 4,
@@ -172,7 +172,7 @@ impl TryFrom<&RawFrame> for VerticalRate {
 }
 
 impl VerticalRate {
-    pub fn decode_rate(vertical_rate: i16) -> i16 {
+    const fn decode_rate(vertical_rate: i16) -> i16 {
         64 * (vertical_rate - 1)
     }
 }
