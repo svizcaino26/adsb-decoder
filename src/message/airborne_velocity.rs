@@ -61,11 +61,31 @@ pub enum EastWestVelocity {
     Unavailable,
 }
 
+impl Display for EastWestVelocity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::East(value) => write!(f, "{value}"),
+            Self::West(value) => write!(f, "-{value}"),
+            Self::Unavailable => write!(f, "Unavailable"),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum NorthSouthVelocity {
     North(i16),
     South(i16),
     Unavailable,
+}
+
+impl Display for NorthSouthVelocity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::North(value) => write!(f, "{value}"),
+            Self::South(value) => write!(f, "-{value}"),
+            Self::Unavailable => write!(f, "Unavailable"),
+        }
+    }
 }
 
 #[derive(Debug)]
