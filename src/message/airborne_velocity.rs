@@ -79,6 +79,12 @@ pub enum Velocity {
     },
 }
 
+impl Velocity {
+    const fn decode_ground_component(value: i16, multiplier: i16) -> i16 {
+        multiplier * (value - 1)
+    }
+}
+
 impl TryFrom<&RawFrame> for Velocity {
     type Error = AdsbError;
 
