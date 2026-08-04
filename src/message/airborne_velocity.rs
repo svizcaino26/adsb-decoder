@@ -91,6 +91,38 @@ impl Display for NorthSouthVelocity {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum MagneticHeading {
+    Available(f64),
+    Unavailable,
+}
+
+impl Display for MagneticHeading {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Available(value) => write!(f, "{value:.2} degrees"),
+            Self::Unavailable => write!(f, "Unavailable"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum AirSpeed {
+    IndicatedAirSpeed(i16),
+    TrueAirSpeed(i16),
+    Unavailable,
+}
+
+impl Display for AirSpeed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::IndicatedAirSpeed(value) => write!(f, "{value} (IAS)"),
+            Self::TrueAirSpeed(value) => write!(f, "{value} (TAS)"),
+            Self::Unavailable => write!(f, "Unavailable"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Velocity {
     GroundSpeed {
