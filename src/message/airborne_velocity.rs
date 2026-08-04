@@ -12,6 +12,9 @@ const FIELD_HDG: RangeInclusive<u8> = 47u8..=56u8;
 const FIELD_AIRSPEED: RangeInclusive<u8> = 58u8..=67u8;
 const FIELD_VERTICAL_RATE_SIGN: RangeInclusive<u8> = 69u8..=69u8;
 const FIELD_VERTICAL_RATE: RangeInclusive<u8> = 70u8..=78u8;
+const GEO_ALTITUDE_DELTA_SIGN: RangeInclusive<u8> = 81u8..=81u8;
+const FIELD_GEO_ALTITUDE_DELTA: RangeInclusive<u8> = 82..=88;
+const GEO_ALTITUDE_DELTA_STEPS: i16 = 25;
 
 #[derive(Debug)]
 pub enum SubType {
