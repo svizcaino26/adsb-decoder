@@ -52,11 +52,25 @@ impl SubType {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum EastWestVelocity {
+    East(i16),
+    West(i16),
+    Unavailable,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum NorthSouthVelocity {
+    North(i16),
+    South(i16),
+    Unavailable,
+}
+
 #[derive(Debug)]
 pub enum Velocity {
     GroundSpeed {
-        east_west: Option<i16>,
-        north_south: Option<i16>,
+        east_west: EastWestVelocity,
+        north_south: NorthSouthVelocity,
     },
     AirSpeed {
         heading: Option<f64>,
