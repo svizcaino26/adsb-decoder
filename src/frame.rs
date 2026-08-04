@@ -1,4 +1,4 @@
-use std::ops::RangeInclusive;
+use std::{fmt::Display, ops::RangeInclusive};
 
 use crate::error::AdsbError;
 
@@ -20,6 +20,40 @@ const FIELD_TYPE_CODE: RangeInclusive<u8> = 33..=37;
 
 /// Message (ME)
 const FIELD_MESSAGE: RangeInclusive<u8> = 33..=88;
+
+/// Unique aircraft identifier contained in frame bits 9 - 32
+#[derive(Debug, PartialEq, Eq, Copy, Hash, Clone)]
+pub struct IcaoAddress(u32);
+
+impl IcaoAddress {
+    pub const fn new(value: u32) -> Self {
+        Self(value)
+    }
+
+    pub const fn value(self) -> u32 {
+        self.0
+    }
+}
+
+impl Display for IcaoAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:06X}", self.value())
+    }
+}
+
+/// ADS-B Type Code (TC) contained in frame bits 33–37.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct TypeCode(u8);
+
+impl TypeCode {
+    pub const fn new(value: u8) -> Self {
+        Self(value)
+    }
+
+    pub const fn value(self) -> u8 {
+        self.0
+    }
+}
 
 /// ADS-B frames are 112 bits.
 /// Bit 1 is the most significant bit of the frame, following the ICAO specification.
@@ -87,6 +121,25 @@ impl RawFrame {
         let shift = ADSB_FRAME_BITS - end;
         let mask = (1u128 << len) - 1;
         Ok((self.bits >> shift) & mask)
+    }
+
+    #[allow(clippy::expect_used)]
+    pub fn icao(&self) -> IcaoAddress {
+        IcaoAddress::new(
+            self.bits(FIELD_ICAO_ADDRESS)
+                .expect("ICAO range is always valid")
+                .try_into()
+                .expect("24 bits always fit into u32"),
+        )
+    }
+
+    pub fn type_code(&self) -> TypeCode {
+        TypeCode::new(
+            self.bits(FIELD_TYPE_CODE)
+                .expect("TypeCode range is always valid")
+                .try_into()
+                .expect("5 bit field fits into u8"),
+        )
     }
 }
 

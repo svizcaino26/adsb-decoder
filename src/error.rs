@@ -15,4 +15,7 @@ pub enum AdsbError {
 
     #[error("Invalid bit range: {0:?}")]
     InvalidBitRange(RangeInclusive<u8>),
+
+    #[error("Unsupported type code: {0}")]
+    UnsupportedTypeCode(u8),
 }
