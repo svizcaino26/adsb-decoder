@@ -180,12 +180,49 @@ impl VerticalRate {
 impl Display for VerticalRate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Ascending(value) => {
-                write!(f, "{}", value)
-            }
-            Self::Descending(value) => {
-                write!(f, "-{}", value)
-            }
+            Self::Ascending(value) => write!(f, "{value}"),
+            Self::Descending(value) => write!(f, "-{value}"),
+            Self::Unavailable => write!(f, "Unavailable"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum GeometriAltitudeDelta {
+    Above(i16),
+    Below(i16),
+    Unavailable,
+}
+
+impl TryFrom<&RawFrame> for GeometriAltitudeDelta {
+    type Error = AdsbError;
+    fn try_from(frame: &RawFrame) -> Result<Self, AdsbError> {
+        let geo_altitude_delta: i16 = frame
+            .bits(FIELD_GEO_ALTITUDE_DELTA)?
+            .try_into()
+            .expect("7 bit encoded field");
+
+        if geo_altitude_delta == 0 {
+            Ok(Self::Unavailable)
+        } else if frame.bits(GEO_ALTITUDE_DELTA_SIGN)? == 0 {
+            Ok(Self::Above(Self::decode_altitude_delta(geo_altitude_delta)))
+        } else {
+            Ok(Self::Below(Self::decode_altitude_delta(geo_altitude_delta)))
+        }
+    }
+}
+
+impl GeometriAltitudeDelta {
+    const fn decode_altitude_delta(value: i16) -> i16 {
+        (value - 1) * GEO_ALTITUDE_DELTA_STEPS
+    }
+}
+
+impl Display for GeometriAltitudeDelta {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Above(value) => write!(f, "{value}"),
+            Self::Below(value) => write!(f, "-{value}"),
             Self::Unavailable => write!(f, "Unavailable"),
         }
     }
@@ -198,7 +235,7 @@ pub struct AirborneVelocity {
     pub ifr_capability: bool,
     pub velocity: Velocity,
     pub vertical_rate: VerticalRate,
-    pub geo_minus_baro: i16,
+    pub geo_minus_baro: GeometriAltitudeDelta,
 }
 
 impl TryFrom<&RawFrame> for AirborneVelocity {
@@ -212,12 +249,15 @@ impl TryFrom<&RawFrame> for AirborneVelocity {
         let velocity = Velocity::try_from(frame)?;
 
         let vertical_rate = VerticalRate::try_from(frame)?;
+
+        let geo_minus_baro = GeometriAltitudeDelta::try_from(frame)?;
         Ok(Self {
             icao: frame.icao(),
             intent_change,
             ifr_capability,
             velocity,
             vertical_rate,
+            geo_minus_baro,
         })
     }
 }
