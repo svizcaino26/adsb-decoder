@@ -130,15 +130,18 @@ pub enum Velocity {
         north_south: NorthSouthVelocity,
     },
     AirSpeed {
-        heading: Option<f64>,
-        airspeed: Option<i16>,
-        is_true_airspeed: bool,
+        heading: MagneticHeading,
+        airspeed: AirSpeed,
     },
 }
 
 impl Velocity {
-    const fn decode_ground_component(value: i16, multiplier: i16) -> i16 {
+    const fn decode_speed_value(value: i16, multiplier: i16) -> i16 {
         multiplier * (value - 1)
+    }
+
+    const fn decode_magnetic_heading(value: f64) -> f64 {
+        value * DEGRESS_PER_LSB
     }
 }
 
@@ -160,15 +163,9 @@ impl TryFrom<&RawFrame> for Velocity {
                 let east_west_speed = if east_west_vector == 0 {
                     EastWestVelocity::Unavailable
                 } else if frame.bits(EAST_WEST_VELOCITY_SIGN)? == 0 {
-                    EastWestVelocity::East(Self::decode_ground_component(
-                        east_west_vector,
-                        multiplier,
-                    ))
+                    EastWestVelocity::East(Self::decode_speed_value(east_west_vector, multiplier))
                 } else {
-                    EastWestVelocity::West(Self::decode_ground_component(
-                        east_west_vector,
-                        multiplier,
-                    ))
+                    EastWestVelocity::West(Self::decode_speed_value(east_west_vector, multiplier))
                 };
 
                 let north_south_vector: i16 = frame
@@ -179,12 +176,12 @@ impl TryFrom<&RawFrame> for Velocity {
                 let north_south_speed = if north_south_vector == 0 {
                     NorthSouthVelocity::Unavailable
                 } else if frame.bits(NORTH_SOUTH_VELOCITY_SIGN)? == 0 {
-                    NorthSouthVelocity::North(Self::decode_ground_component(
+                    NorthSouthVelocity::North(Self::decode_speed_value(
                         north_south_vector,
                         multiplier,
                     ))
                 } else {
-                    NorthSouthVelocity::South(Self::decode_ground_component(
+                    NorthSouthVelocity::South(Self::decode_speed_value(
                         north_south_vector,
                         multiplier,
                     ))
