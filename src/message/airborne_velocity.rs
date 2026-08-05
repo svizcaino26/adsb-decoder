@@ -11,7 +11,7 @@ const FIELD_EAST_WEST_VELOCITY: RangeInclusive<u8> = 47u8..=56u8;
 const NORTH_SOUTH_VELOCITY_SIGN: RangeInclusive<u8> = 57u8..=57u8;
 const FIELD_NORTH_SOUTH_VELOCITY: RangeInclusive<u8> = 58u8..=67u8;
 const MAGNETIC_HEADING_STATUS: RangeInclusive<u8> = 46u8..=46u8;
-const DEGRESS_PER_LSB: f64 = 360.0 / 1024.0;
+const DEGREES_PER_LSB: f64 = 360.0 / 1024.0;
 const FIELD_MAGNETIC_HEADING: RangeInclusive<u8> = 47u8..=56u8;
 const AIRSPEED_TYPE: RangeInclusive<u8> = 57u8..=57u8;
 const FIELD_AIRSPEED: RangeInclusive<u8> = 58u8..=67u8;
@@ -141,7 +141,7 @@ impl Velocity {
     }
 
     const fn decode_magnetic_heading(value: f64) -> f64 {
-        value * DEGRESS_PER_LSB
+        value * DEGREES_PER_LSB
     }
 }
 
@@ -265,13 +265,13 @@ impl Display for VerticalRate {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum GeometriAltitudeDelta {
+pub enum GeometricAltitudeDelta {
     Above(i16),
     Below(i16),
     Unavailable,
 }
 
-impl TryFrom<&RawFrame> for GeometriAltitudeDelta {
+impl TryFrom<&RawFrame> for GeometricAltitudeDelta {
     type Error = AdsbError;
     fn try_from(frame: &RawFrame) -> Result<Self, AdsbError> {
         let geo_altitude_delta: i16 = frame
@@ -289,13 +289,13 @@ impl TryFrom<&RawFrame> for GeometriAltitudeDelta {
     }
 }
 
-impl GeometriAltitudeDelta {
+impl GeometricAltitudeDelta {
     const fn decode_altitude_delta(value: i16) -> i16 {
         (value - 1) * GEO_ALTITUDE_DELTA_STEPS
     }
 }
 
-impl Display for GeometriAltitudeDelta {
+impl Display for GeometricAltitudeDelta {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Above(value) => write!(f, "{value}"),
@@ -312,7 +312,7 @@ pub struct AirborneVelocity {
     pub ifr_capability: bool,
     pub velocity: Velocity,
     pub vertical_rate: VerticalRate,
-    pub geo_minus_baro: GeometriAltitudeDelta,
+    pub geo_minus_baro: GeometricAltitudeDelta,
 }
 
 impl TryFrom<&RawFrame> for AirborneVelocity {
@@ -327,7 +327,7 @@ impl TryFrom<&RawFrame> for AirborneVelocity {
 
         let vertical_rate = VerticalRate::try_from(frame)?;
 
-        let geo_minus_baro = GeometriAltitudeDelta::try_from(frame)?;
+        let geo_minus_baro = GeometricAltitudeDelta::try_from(frame)?;
         Ok(Self {
             icao: frame.icao(),
             intent_change,
