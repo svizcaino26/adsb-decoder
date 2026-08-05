@@ -44,8 +44,8 @@ mod tests {
     use crate::{
         frame,
         message::airborne_velocity::{
-            AirSpeed, EastWestVelocity, GeometriAltitudeDelta, MagneticHeading, NorthSouthVelocity,
-            VerticalRate,
+            AirSpeed, EastWestVelocity, GeometricAltitudeDelta, MagneticHeading,
+            NorthSouthVelocity, VerticalRate,
         },
     };
 
@@ -90,7 +90,7 @@ mod tests {
             (EastWestVelocity::West(8), NorthSouthVelocity::South(159))
         );
         assert_eq!(msg.vertical_rate, VerticalRate::Descending(832));
-        assert_eq!(msg.geo_minus_baro, GeometriAltitudeDelta::Above(550));
+        assert_eq!(msg.geo_minus_baro, GeometricAltitudeDelta::Above(550));
     }
 
     #[test]
@@ -115,6 +115,6 @@ mod tests {
             )
         );
         assert_eq!(msg.vertical_rate, VerticalRate::Descending(2304));
-        assert_eq!(msg.geo_minus_baro, GeometriAltitudeDelta::Unavailable);
+        assert_eq!(msg.geo_minus_baro, GeometricAltitudeDelta::Unavailable);
     }
 }
