@@ -1,14 +1,15 @@
-//! Decodes ADS-B Airborne velocities messages (Type Code 19).
+//! Decodes ADS-B Airborne Velocity messages (Type Code 19).
 //!
-//! Airbone velocity messages may contain the encoded aircraft
-//! Ground Speed or Air Speed.
+//! Airborne Velocity messages encode either an aircraft's ground
+//! velocity or airspeed, depending on the velocity subtype.
 //!
-//! Ground Speed is encoded as 2 components `east-west` velocity and
-//! `north-south` velocity.
+//! Ground velocity is represented as independent east-west and
+//! north-south velocity components.
 //!
-//! Air Speed has an encoded speed and a heading value.
+//! Airspeed messages contain a magnetic heading (when available)
+//! together with either indicated or true airspeed.
 //!
-//! The implementation follows the ADS-B specification described in:
+//! The implementation follows:
 //! - ICAO Annex 10, Volume IV
 //! - Junzi Sun, *The 1090 Megahertz Riddle*
 //!   <https://mode-s.org/1090mhz/content/ads-b/5-airborne-velocity.html>
@@ -38,9 +39,11 @@ const GEO_ALTITUDE_DELTA_SIGN: RangeInclusive<u8> = 81u8..=81u8;
 const FIELD_GEO_ALTITUDE_DELTA: RangeInclusive<u8> = 82..=88;
 const GEO_ALTITUDE_DELTA_STEPS: i16 = 25;
 
-/// Speed sub type `ST` is 3 bit encoded.
-/// Determines wether the encoded speed is
-/// Supersonic or Subsonic.
+/// Velocity subtype (`ST`) encoded in bits 38–40.
+///
+/// Determines whether the message contains ground speed or
+/// airspeed information, and whether the encoded values use
+/// subsonic or supersonic scaling.
 #[derive(Debug)]
 pub enum SubType {
     GroundSubSonic,
@@ -82,11 +85,13 @@ impl SubType {
     }
 }
 
-/// East-West component of an aircraft's ground velocity.
+/// East-west component of an aircraft's ground velocity.
 ///
-/// Positive values are represented as `East`bound.
-/// Negative values are represented as `West`bound.
-/// Unavailable variant means all10 bits of the field are zero.
+/// `East` represents motion toward the east.
+/// `West` represents motion toward the west.
+///
+/// `Unavailable` indicates that the velocity component is not
+/// available (all encoded bits are zero).
 #[derive(Debug, PartialEq, Eq)]
 pub enum EastWestVelocity {
     East(i16),
@@ -106,9 +111,10 @@ impl Display for EastWestVelocity {
 
 /// North-South component of an aircraft's ground velocity.
 ///
-/// Positive values are represented as `North`bound.
-/// Negative values are represented as `South`bound.
-/// Unavailable variant means all 10 bits of the field are zero.
+/// `North` represents motion toward the north.
+/// `South` represents motion toward the south.
+/// `Unavailable` indicates that the velocity component is not
+/// available (all encoded bits are zero).
 #[derive(Debug, PartialEq, Eq)]
 pub enum NorthSouthVelocity {
     North(i16),
@@ -126,12 +132,11 @@ impl Display for NorthSouthVelocity {
     }
 }
 
-/// Heading coponent of an aircraft's air velocity.
+/// Aircraft magnetic heading.
 ///
-/// Variants are determined by bit 46 of the ADS-B frame.
-///
-/// When available a value between 0-360 degrees is encoded
-/// with 0 meaning the aircraft is heading `North`.
+/// `Available` contains the decoded magnetic heading in degrees.
+/// `Unavailable` indicates that the transmitter did not provide
+/// heading information.
 #[derive(Debug, PartialEq)]
 pub enum MagneticHeading {
     Available(f64),
@@ -152,8 +157,7 @@ impl Display for MagneticHeading {
 ///
 /// Unavailable means all 10 bits of the field are zero.
 ///
-/// Variants `IndicatedAirSpeed` and `TrueAirSpeed` are determined
-/// by bit 57 of the ADS-B frame.
+/// Two possible variants are encoded `IndicatedAirSpeed` and `TrueAirSpeed`.
 ///
 /// More information at <https://pilotinstitute.com/airspeed-types>
 #[derive(Debug, PartialEq, Eq)]
@@ -176,7 +180,11 @@ impl Display for AirSpeed {
 /// ADS-B velocity messages (Type Code 19) may encode Ground Speed,
 /// or Air Speed when Ground Speed cannot be obtained.
 ///
-/// Each variant is represented with different components.
+/// ADS-B Airborne Velocity messages encode either:
+///
+/// - ground speed, represented as east-west and north-south
+///   velocity components, or
+/// - airspeed, represented as magnetic heading and airspeed.
 #[derive(Debug)]
 pub enum Velocity {
     GroundSpeed {
@@ -277,10 +285,12 @@ impl TryFrom<&RawFrame> for Velocity {
     }
 }
 
-/// Represents the ascending or descending speed of an
-/// aircraft in feet/min.
+/// Aircraft vertical rate in feet per minute.
 ///
-/// Unavailable when all 8 bits of the field are zero.
+/// `Ascending` and `Descending` contain the decoded climb or
+/// descent rate.
+///
+/// `Unavailable` indicates that no vertical rate was transmitted.
 #[derive(Debug, PartialEq, Eq)]
 pub enum VerticalRate {
     Ascending(i16),
@@ -294,7 +304,7 @@ impl TryFrom<&RawFrame> for VerticalRate {
         let vertical_rate: i16 = frame
             .bits(FIELD_VERTICAL_RATE)?
             .try_into()
-            .expect("8 bit encoded field fits in i16");
+            .expect("9 bit encoded field fits in i16");
 
         if vertical_rate == 0 {
             Ok(Self::Unavailable)
@@ -322,6 +332,16 @@ impl Display for VerticalRate {
     }
 }
 
+/// Difference between geometric (GNSS) altitude and barometric altitude.
+///
+/// `Above` indicates the geometric altitude is above the
+/// barometric altitude.
+///
+/// `Below` indicates the geometric altitude is below the
+/// barometric altitude.
+///
+/// `Unavailable` indicates that no altitude difference was
+/// transmitted.
 #[derive(Debug, PartialEq, Eq)]
 pub enum GeometricAltitudeDelta {
     Above(i16),
@@ -363,13 +383,29 @@ impl Display for GeometricAltitudeDelta {
     }
 }
 
+/// Decoded ADS-B Airborne Velocity message (Type Code 19).
+///
+/// Contains the aircraft ICAO address together with the decoded
+/// velocity information, vertical rate, and the difference
+/// between geometric and barometric altitude.
 #[derive(Debug)]
 pub struct AirborneVelocity {
+    /// Aircraft ICAO address.
     pub icao: IcaoAddress,
+
+    /// Intent Change flag.
     pub intent_change: bool,
+
+    /// IFR Capability flag.
     pub ifr_capability: bool,
+
+    /// Aircraft velocity.
     pub velocity: Velocity,
+
+    /// Aircraft climb/descent rate.
     pub vertical_rate: VerticalRate,
+
+    /// Difference between geometric and barometric altitude.
     pub geo_minus_baro: GeometricAltitudeDelta,
 }
 
