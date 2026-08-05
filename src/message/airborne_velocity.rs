@@ -1,3 +1,17 @@
+//! Decodes ADS-B Airborne velocities messages (Type Code 19).
+//!
+//! Airbone velocity messages may contain the encoded aircraft
+//! Ground Speed or Air Speed.
+//!
+//! Ground Speed is encoded as 2 components `east-west` velocity and
+//! `north-south` velocity.
+//!
+//! Air Speed has an encoded speed and a heading value.
+//!
+//! The implementation follows the ADS-B specification described in:
+//! - ICAO Annex 10, Volume IV
+//! - Junzi Sun, *The 1090 Megahertz Riddle*
+//!   <https://mode-s.org/1090mhz/content/ads-b/5-airborne-velocity.html>
 use std::{fmt::Display, ops::RangeInclusive};
 
 use crate::{
@@ -6,6 +20,8 @@ use crate::{
 };
 
 const FIELD_SUBTYPE: RangeInclusive<u8> = 38u8..=40u8;
+const FIELD_INTENT_CHANGE: RangeInclusive<u8> = 41u8..=41u8;
+const FIELD_IFR_CAPABILITY: RangeInclusive<u8> = 42u8..=42u8;
 const EAST_WEST_VELOCITY_SIGN: RangeInclusive<u8> = 46u8..=46u8;
 const FIELD_EAST_WEST_VELOCITY: RangeInclusive<u8> = 47u8..=56u8;
 const NORTH_SOUTH_VELOCITY_SIGN: RangeInclusive<u8> = 57u8..=57u8;
@@ -16,11 +32,15 @@ const FIELD_MAGNETIC_HEADING: RangeInclusive<u8> = 47u8..=56u8;
 const AIRSPEED_TYPE: RangeInclusive<u8> = 57u8..=57u8;
 const FIELD_AIRSPEED: RangeInclusive<u8> = 58u8..=67u8;
 const FIELD_VERTICAL_RATE_SIGN: RangeInclusive<u8> = 69u8..=69u8;
+const FEET_PER_LSB: i16 = 64;
 const FIELD_VERTICAL_RATE: RangeInclusive<u8> = 70u8..=78u8;
 const GEO_ALTITUDE_DELTA_SIGN: RangeInclusive<u8> = 81u8..=81u8;
 const FIELD_GEO_ALTITUDE_DELTA: RangeInclusive<u8> = 82..=88;
 const GEO_ALTITUDE_DELTA_STEPS: i16 = 25;
 
+/// Speed sub type `ST` is 3 bit encoded.
+/// Determines wether the encoded speed is
+/// Supersonic or Subsonic.
 #[derive(Debug)]
 pub enum SubType {
     GroundSubSonic,
@@ -36,7 +56,7 @@ impl TryFrom<&RawFrame> for SubType {
         let st: u8 = frame
             .bits(FIELD_SUBTYPE)?
             .try_into()
-            .expect("resulting value is 3 bit encoded");
+            .expect("3 bit encoded value fits in u8");
 
         match st {
             1 => Ok(Self::GroundSubSonic),
@@ -49,6 +69,11 @@ impl TryFrom<&RawFrame> for SubType {
 }
 
 impl SubType {
+    /// The multiplier is a scaling factor used to
+    /// calculate speed magnitudes.
+    ///
+    /// The spec defines this as `4x` the calculated
+    /// magnitude.
     const fn multiplier(self) -> i16 {
         match self {
             Self::GroundSubSonic | Self::AirSubSonic => 1,
@@ -57,6 +82,11 @@ impl SubType {
     }
 }
 
+/// East-West component of an aircraft's ground velocity.
+///
+/// Positive values are represented as `East`bound.
+/// Negative values are represented as `West`bound.
+/// Unavailable variant means all10 bits of the field are zero.
 #[derive(Debug, PartialEq, Eq)]
 pub enum EastWestVelocity {
     East(i16),
@@ -74,6 +104,11 @@ impl Display for EastWestVelocity {
     }
 }
 
+/// North-South component of an aircraft's ground velocity.
+///
+/// Positive values are represented as `North`bound.
+/// Negative values are represented as `South`bound.
+/// Unavailable variant means all 10 bits of the field are zero.
 #[derive(Debug, PartialEq, Eq)]
 pub enum NorthSouthVelocity {
     North(i16),
@@ -91,6 +126,12 @@ impl Display for NorthSouthVelocity {
     }
 }
 
+/// Heading coponent of an aircraft's air velocity.
+///
+/// Variants are determined by bit 46 of the ADS-B frame.
+///
+/// When available a value between 0-360 degrees is encoded
+/// with 0 meaning the aircraft is heading `North`.
 #[derive(Debug, PartialEq)]
 pub enum MagneticHeading {
     Available(f64),
@@ -106,6 +147,15 @@ impl Display for MagneticHeading {
     }
 }
 
+/// ADS-B velocity messages with sub-type 3-4.
+/// Broadcasted when the aircraft's ground speed cannot be obtained.
+///
+/// Unavailable means all 10 bits of the field are zero.
+///
+/// Variants `IndicatedAirSpeed` and `TrueAirSpeed` are determined
+/// by bit 57 of the ADS-B frame.
+///
+/// More information at <https://pilotinstitute.com/airspeed-types>
 #[derive(Debug, PartialEq, Eq)]
 pub enum AirSpeed {
     IndicatedAirSpeed(i16),
@@ -123,6 +173,10 @@ impl Display for AirSpeed {
     }
 }
 
+/// ADS-B velocity messages (Type Code 19) may encode Ground Speed,
+/// or Air Speed when Ground Speed cannot be obtained.
+///
+/// Each variant is represented with different components.
 #[derive(Debug)]
 pub enum Velocity {
     GroundSpeed {
@@ -223,6 +277,10 @@ impl TryFrom<&RawFrame> for Velocity {
     }
 }
 
+/// Represents the ascending or descending speed of an
+/// aircraft in feet/min.
+///
+/// Unavailable when all 8 bits of the field are zero.
 #[derive(Debug, PartialEq, Eq)]
 pub enum VerticalRate {
     Ascending(i16),
@@ -236,7 +294,7 @@ impl TryFrom<&RawFrame> for VerticalRate {
         let vertical_rate: i16 = frame
             .bits(FIELD_VERTICAL_RATE)?
             .try_into()
-            .expect("8 bit encoded field");
+            .expect("8 bit encoded field fits in i16");
 
         if vertical_rate == 0 {
             Ok(Self::Unavailable)
@@ -250,7 +308,7 @@ impl TryFrom<&RawFrame> for VerticalRate {
 
 impl VerticalRate {
     const fn decode_rate(vertical_rate: i16) -> i16 {
-        64 * (vertical_rate - 1)
+        FEET_PER_LSB * (vertical_rate - 1)
     }
 }
 
@@ -319,9 +377,9 @@ impl TryFrom<&RawFrame> for AirborneVelocity {
     type Error = AdsbError;
 
     fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
-        let intent_change = frame.bits(41..=41)? == 1;
+        let intent_change = frame.bits(FIELD_INTENT_CHANGE)? == 1;
 
-        let ifr_capability = frame.bits(42..=42)? == 1;
+        let ifr_capability = frame.bits(FIELD_IFR_CAPABILITY)? == 1;
 
         let velocity = Velocity::try_from(frame)?;
 
