@@ -44,7 +44,8 @@ mod tests {
     use crate::{
         frame,
         message::airborne_velocity::{
-            EastWestVelocity, GeometriAltitudeDelta, NorthSouthVelocity, VerticalRate,
+            AirSpeed, EastWestVelocity, GeometriAltitudeDelta, MagneticHeading, NorthSouthVelocity,
+            VerticalRate,
         },
     };
 
@@ -52,7 +53,7 @@ mod tests {
     use std::assert_matches;
 
     #[test]
-    #[allow(clippy::unwrap_used)]
+    #[allow(clippy::unwrap_used, clippy::panic)]
     fn decode_aircraft_identification() {
         let frame = RawFrame::from_hex("8D4840D6202CC371C32CE0576098").unwrap();
         let message = Message::try_from(&frame).unwrap();
@@ -67,7 +68,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::unwrap_used)]
+    #[allow(clippy::unwrap_used, clippy::panic)]
     fn decode_ground_velocity() {
         let frame = RawFrame::from_hex("8D485020994409940838175B284F").unwrap();
         let message = Message::try_from(&frame).unwrap();
@@ -90,5 +91,30 @@ mod tests {
         );
         assert_eq!(msg.vertical_rate, VerticalRate::Descending(832));
         assert_eq!(msg.geo_minus_baro, GeometriAltitudeDelta::Above(550));
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used, clippy::panic)]
+    fn decode_air_velocity() {
+        let frame = RawFrame::from_hex("8DA05F219B06B6AF189400CBC33F").unwrap();
+        let message = Message::try_from(&frame).unwrap();
+
+        let Message::AirborneVelocity(msg) = message else {
+            panic!("expected Airborne Velocity ADS-B frame");
+        };
+
+        let Velocity::AirSpeed { heading, airspeed } = msg.velocity else {
+            panic!("expected Air Speed encoded message");
+        };
+
+        assert_eq!(
+            (heading, airspeed),
+            (
+                MagneticHeading::Available(243.984_375),
+                AirSpeed::TrueAirSpeed(375)
+            )
+        );
+        assert_eq!(msg.vertical_rate, VerticalRate::Descending(2304));
+        assert_eq!(msg.geo_minus_baro, GeometriAltitudeDelta::Unavailable);
     }
 }
