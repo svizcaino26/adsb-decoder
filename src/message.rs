@@ -1,7 +1,7 @@
 use crate::{error::AdsbError, frame::RawFrame};
 
-mod airborne_velocity;
-mod aircraft_identification;
+pub mod airborne_velocity;
+pub mod aircraft_identification;
 
 use airborne_velocity::{AirborneVelocity, Velocity};
 use aircraft_identification::{AircraftCategory, AircraftIdentification};
