@@ -123,6 +123,13 @@ impl RawFrame {
         Ok((self.bits >> shift) & mask)
     }
 
+    /// This is a typed wrapper around [`RawFrame::bits`]. The target type must
+    /// implement `TryFrom<u128>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AdsbError::InvalidBitConversion`] if the extracted value cannot
+    /// be represented by the target type.
     pub fn bits_as<T>(&self, range: RangeInclusive<u8>) -> Result<T, AdsbError>
     where
         T: TryFrom<u128>,
