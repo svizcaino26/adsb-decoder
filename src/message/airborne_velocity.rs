@@ -56,10 +56,7 @@ impl TryFrom<&RawFrame> for SubType {
     type Error = AdsbError;
 
     fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
-        let st: u8 = frame
-            .bits(FIELD_SUBTYPE)?
-            .try_into()
-            .expect("3 bit encoded value fits in u8");
+        let st = frame.bits_as(FIELD_SUBTYPE)?;
 
         match st {
             1 => Ok(Self::GroundSubSonic),
@@ -217,10 +214,7 @@ impl TryFrom<&RawFrame> for Velocity {
             SubType::GroundSubSonic | SubType::GroundSuperSonic => {
                 let multiplier = st.multiplier();
 
-                let east_west_vector: i16 = frame
-                    .bits(FIELD_EAST_WEST_VELOCITY)?
-                    .try_into()
-                    .expect("10 bit encoded value fits in i16");
+                let east_west_vector = frame.bits_as(FIELD_EAST_WEST_VELOCITY)?;
 
                 let east_west_speed = if east_west_vector == 0 {
                     EastWestVelocity::Unavailable
@@ -230,10 +224,7 @@ impl TryFrom<&RawFrame> for Velocity {
                     EastWestVelocity::West(Self::decode_speed_value(east_west_vector, multiplier))
                 };
 
-                let north_south_vector: i16 = frame
-                    .bits(FIELD_NORTH_SOUTH_VELOCITY)?
-                    .try_into()
-                    .expect("10 bit encoded value fits in i16");
+                let north_south_vector = frame.bits_as(FIELD_NORTH_SOUTH_VELOCITY)?;
 
                 let north_south_speed = if north_south_vector == 0 {
                     NorthSouthVelocity::Unavailable
@@ -266,10 +257,7 @@ impl TryFrom<&RawFrame> for Velocity {
                     MagneticHeading::Available(Self::decode_magnetic_heading(heading))
                 };
 
-                let airspeed: i16 = frame
-                    .bits(FIELD_AIRSPEED)?
-                    .try_into()
-                    .expect("10 bit encoded value");
+                let airspeed = frame.bits_as(FIELD_AIRSPEED)?;
 
                 let airspeed = if airspeed == 0 {
                     AirSpeed::Unavailable
@@ -301,10 +289,7 @@ pub enum VerticalRate {
 impl TryFrom<&RawFrame> for VerticalRate {
     type Error = AdsbError;
     fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
-        let vertical_rate: i16 = frame
-            .bits(FIELD_VERTICAL_RATE)?
-            .try_into()
-            .expect("9 bit encoded field fits in i16");
+        let vertical_rate = frame.bits_as(FIELD_VERTICAL_RATE)?;
 
         if vertical_rate == 0 {
             Ok(Self::Unavailable)
@@ -352,10 +337,7 @@ pub enum GeometricAltitudeDelta {
 impl TryFrom<&RawFrame> for GeometricAltitudeDelta {
     type Error = AdsbError;
     fn try_from(frame: &RawFrame) -> Result<Self, AdsbError> {
-        let geo_altitude_delta: i16 = frame
-            .bits(FIELD_GEO_ALTITUDE_DELTA)?
-            .try_into()
-            .expect("7 bit encoded field");
+        let geo_altitude_delta = frame.bits_as(FIELD_GEO_ALTITUDE_DELTA)?;
 
         if geo_altitude_delta == 0 {
             Ok(Self::Unavailable)
