@@ -21,4 +21,7 @@ pub enum AdsbError {
 
     #[error("Invalid velocity subtype: {0}")]
     InvalidVelocitySubType(u8),
+
+    #[error("Failed to convert extracted bits to target type")]
+    InvalidBitConversion,
 }
