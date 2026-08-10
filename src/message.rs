@@ -1,7 +1,9 @@
 use crate::{error::AdsbError, frame::RawFrame};
 
+mod airborne_velocity;
 mod aircraft_identification;
 
+use airborne_velocity::{AirborneVelocity, Velocity};
 use aircraft_identification::{AircraftCategory, AircraftIdentification};
 
 /// Represents a decoded ADS-B message.
@@ -12,6 +14,7 @@ use aircraft_identification::{AircraftCategory, AircraftIdentification};
 enum Message {
     /// Aircraft Identification and Category (Type Codes 1–4).
     AircraftIdentification(AircraftIdentification),
+    AirborneVelocity(AirborneVelocity),
 }
 
 impl TryFrom<&RawFrame> for Message {
@@ -30,6 +33,7 @@ impl TryFrom<&RawFrame> for Message {
             1..=4 => Ok(Self::AircraftIdentification(
                 AircraftIdentification::try_from(frame)?,
             )),
+            19 => Ok(Self::AirborneVelocity(AirborneVelocity::try_from(frame)?)),
             tc => Err(AdsbError::UnsupportedTypeCode(tc)),
         }
     }
@@ -37,23 +41,80 @@ impl TryFrom<&RawFrame> for Message {
 
 #[cfg(test)]
 mod tests {
-    use crate::frame;
+    use crate::{
+        frame,
+        message::airborne_velocity::{
+            AirSpeed, EastWestVelocity, GeometricAltitudeDelta, MagneticHeading,
+            NorthSouthVelocity, VerticalRate,
+        },
+    };
 
     use super::*;
     use std::assert_matches;
 
     #[test]
-    #[allow(clippy::unwrap_used)]
+    #[allow(clippy::unwrap_used, clippy::panic)]
     fn decode_aircraft_identification() {
         let frame = RawFrame::from_hex("8D4840D6202CC371C32CE0576098").unwrap();
         let message = Message::try_from(&frame).unwrap();
 
-        match message {
-            Message::AircraftIdentification(msg) => {
-                assert_eq!(msg.icao, frame::IcaoAddress::new(0x48_40D6));
-                assert_eq!(msg.callsign, "KLM1023");
-                assert_matches!(msg.category, AircraftCategory::NoCategoryInformation);
-            }
-        }
+        let Message::AircraftIdentification(msg) = message else {
+            panic!("expected Aircraft Identification ADS-B frame");
+        };
+
+        assert_eq!(msg.icao, frame::IcaoAddress::new(0x48_40D6));
+        assert_eq!(msg.callsign, "KLM1023");
+        assert_matches!(msg.category, AircraftCategory::NoCategoryInformation);
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used, clippy::panic)]
+    fn decode_ground_velocity() {
+        let frame = RawFrame::from_hex("8D485020994409940838175B284F").unwrap();
+        let message = Message::try_from(&frame).unwrap();
+
+        let Message::AirborneVelocity(msg) = message else {
+            panic!("expected Airborne Velocity ADS-B frame");
+        };
+
+        let Velocity::GroundSpeed {
+            east_west,
+            north_south,
+        } = msg.velocity
+        else {
+            panic!("expected Ground Speed encoded message");
+        };
+
+        assert_eq!(
+            (east_west, north_south),
+            (EastWestVelocity::West(8), NorthSouthVelocity::South(159))
+        );
+        assert_eq!(msg.vertical_rate, VerticalRate::Descending(832));
+        assert_eq!(msg.geo_minus_baro, GeometricAltitudeDelta::Above(550));
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used, clippy::panic)]
+    fn decode_air_velocity() {
+        let frame = RawFrame::from_hex("8DA05F219B06B6AF189400CBC33F").unwrap();
+        let message = Message::try_from(&frame).unwrap();
+
+        let Message::AirborneVelocity(msg) = message else {
+            panic!("expected Airborne Velocity ADS-B frame");
+        };
+
+        let Velocity::AirSpeed { heading, airspeed } = msg.velocity else {
+            panic!("expected Air Speed encoded message");
+        };
+
+        assert_eq!(
+            (heading, airspeed),
+            (
+                MagneticHeading::Available(243.984_375),
+                AirSpeed::TrueAirSpeed(375)
+            )
+        );
+        assert_eq!(msg.vertical_rate, VerticalRate::Descending(2304));
+        assert_eq!(msg.geo_minus_baro, GeometricAltitudeDelta::Unavailable);
     }
 }

@@ -18,4 +18,10 @@ pub enum AdsbError {
 
     #[error("Unsupported type code: {0}")]
     UnsupportedTypeCode(u8),
+
+    #[error("Invalid velocity subtype: {0}")]
+    InvalidVelocitySubType(u8),
+
+    #[error("Failed to convert extracted bits to target type")]
+    InvalidBitConversion,
 }
