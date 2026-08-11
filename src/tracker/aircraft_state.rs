@@ -4,6 +4,11 @@ use crate::message::{
     airborne_velocity::AirborneVelocity, aircraft_identification::AircraftIdentification, Message,
 };
 
+/// Represents the currently known state of a single aircraft.
+///
+/// The state is accumulated from the different ADS-B messages received from
+/// the aircraft. Individual fields remain unavailable until the corresponding
+/// message type has been received.
 #[derive(Debug)]
 pub struct AircraftState {
     identification: Option<AircraftIdentification>,
@@ -22,18 +27,22 @@ impl Default for AircraftState {
 }
 
 impl AircraftState {
+    /// Returns the amount of time elapsed since the aircraft was last observed.
     pub fn time_since_last_seen(&self) -> Duration {
         self.last_seen.elapsed()
     }
 
+    /// Applies an ADS-B message to the aircraft's current state.
+    ///
+    /// Receiving a message also refreshes the timestamp used to determine
+    /// whether the aircraft should be retained by the tracker.
     pub fn update(&mut self, msg: Message) {
+        self.last_seen = Instant::now();
         match msg {
             Message::AircraftIdentification(aircraft_identification) => {
-                self.last_seen = Instant::now();
                 self.identification = Some(aircraft_identification);
             }
             Message::AirborneVelocity(airborne_velocity) => {
-                self.last_seen = Instant::now();
                 self.velocity = Some(airborne_velocity);
             }
         }
