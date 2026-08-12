@@ -28,8 +28,8 @@ impl Default for AircraftState {
 
 impl AircraftState {
     /// Returns the amount of time elapsed since the aircraft was last observed.
-    pub fn time_since_last_seen(&self) -> Duration {
-        self.last_seen.elapsed()
+    pub fn last_seen(&self) -> Instant {
+        self.last_seen
     }
 
     /// Applies an ADS-B message to the aircraft's current state.

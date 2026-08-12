@@ -1,3 +1,4 @@
+use std::time::Instant;
 use std::{collections::HashMap, time::Duration};
 
 use crate::frame::IcaoAddress;
@@ -22,9 +23,13 @@ pub struct AircraftTracker {
 
 impl AircraftTracker {
     /// Removes aircraft that have not been observed within the retention threshold.
+    /// Aircraft tracking expires when `last_seen + RETAIN_THRESHOLD` resolves to
+    /// a time earlier than `now`.
     pub fn prune(&mut self) {
+        let now = Instant::now();
+
         self.aircraft
-            .retain(|_, aircraft| aircraft.time_since_last_seen() <= RETAIN_THRESHOLD);
+            .retain(|_, aircraft| aircraft.last_seen() + RETAIN_THRESHOLD >= now);
     }
 
     /// Updates the state of the aircraft associated with the given message.
