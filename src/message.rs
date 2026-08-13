@@ -1,7 +1,7 @@
 use crate::{error::AdsbError, frame::RawFrame};
 
-mod airborne_velocity;
-mod aircraft_identification;
+pub mod airborne_velocity;
+pub mod aircraft_identification;
 
 use airborne_velocity::{AirborneVelocity, Velocity};
 use aircraft_identification::{AircraftCategory, AircraftIdentification};
@@ -11,7 +11,7 @@ use aircraft_identification::{AircraftCategory, AircraftIdentification};
 /// Each variant contains the strongly typed representation of a
 /// particular ADS-B message as defined by its Type Code (TC).
 #[derive(Debug)]
-enum Message {
+pub enum Message {
     /// Aircraft Identification and Category (Type Codes 1–4).
     AircraftIdentification(AircraftIdentification),
     AirborneVelocity(AirborneVelocity),
