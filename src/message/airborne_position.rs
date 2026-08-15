@@ -35,6 +35,12 @@ impl Altitude {
     const fn decode_barometric_altitude(value: i32) -> Feet {
         Feet(value * BAROMETRIC_ALTITUDE_STEP - ALTITUDE_OFFSET_FT)
     }
+
+    const fn remove_qbit(value: i32) -> i32 {
+        let right_bits = value & 0x0F;
+        let left_bits = (value >> 5) & 0x7F;
+        (left_bits << 4) | (right_bits)
+    }
 }
 }
 
