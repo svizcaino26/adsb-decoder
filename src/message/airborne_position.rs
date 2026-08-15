@@ -31,6 +31,11 @@ pub enum Altitude {
     Unavailable,
 }
 
+impl Altitude {
+    const fn decode_barometric_altitude(value: i32) -> Feet {
+        Feet(value * BAROMETRIC_ALTITUDE_STEP - ALTITUDE_OFFSET_FT)
+    }
+}
 }
 
 pub struct AirbornePosition {
