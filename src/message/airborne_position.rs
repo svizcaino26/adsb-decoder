@@ -42,6 +42,26 @@ impl Altitude {
         (left_bits << 4) | (right_bits)
     }
 }
+
+impl TryFrom<&RawFrame> for Altitude {
+    type Error = AdsbError;
+
+    fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
+        match frame.type_code().value() {
+            9..=18 => {
+                let encoded_altitude = frame.bits_as::<i32>(FIELD_ENCODED_ALTITUDE)?;
+                if encoded_altitude == 0 {
+                    Ok(Self::Unavailable)
+                } else if frame.bits(ALTITUDE_QBIT)? == 1 {
+                    let n = Self::remove_qbit(encoded_altitude);
+                    Ok(Self::Barometric(Self::decode_barometric_altitude(n)))
+                } else {
+                }
+            }
+            20..=22 => Ok(Self::Geometric(777)),
+            _ => Err(AdsbError::UnsupportedTypeCode(frame.type_code().value())),
+        }
+    }
 }
 
 pub struct AirbornePosition {
