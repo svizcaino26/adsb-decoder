@@ -1,9 +1,25 @@
 use crate::frame::IcaoAddress;
 
+pub struct Feet(i32);
+
+impl Feet {
+    fn new(value: i32) -> Self {
+        Self(value)
+    }
+
+    fn value(self) -> i32 {
+        self.0
+    }
+}
+
+pub struct Meters(i32);
+
 pub enum Altitude {
-    Barometric(u16),
-    Geometric(u16),
-    Unavailable(u16),
+    Barometric(Feet),
+    Geometric(Meters),
+    Unavailable,
+}
+
 }
 
 pub struct AirbornePosition {
