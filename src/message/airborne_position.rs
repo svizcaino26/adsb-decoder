@@ -83,6 +83,11 @@ impl Altitude {
 
         value
     }
+
+    const fn decode_coarse_altitude(b500: i32) -> i32 {
+        (b500 - 2) * COARSE_ALTITUDE_STEP
+    }
+
 }
 
 impl TryFrom<&RawFrame> for Altitude {
