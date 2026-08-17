@@ -6,7 +6,7 @@ use crate::{
 };
 
 const BAROMETRIC_ALTITUDE_STEP: i32 = 25;
-const BAROMETRIC_ALTITUDE_STEPS_ALT: i32 = 100;
+const COARSE_ALTITUDE_STEP: i32 = 500;
 const ALTITUDE_OFFSET_FT: i32 = 1000;
 const FIELD_ENCODED_ALTITUDE: RangeInclusive<u8> = 41..=52;
 const ALTITUDE_QBIT: RangeInclusive<u8> = 48..=48;
@@ -14,11 +14,11 @@ const ALTITUDE_QBIT: RangeInclusive<u8> = 48..=48;
 pub struct Feet(i32);
 
 impl Feet {
-    fn new(value: i32) -> Self {
+    const fn new(value: i32) -> Self {
         Self(value)
     }
 
-    fn value(self) -> i32 {
+    const fn value(self) -> i32 {
         self.0
     }
 }
@@ -33,7 +33,7 @@ pub enum Altitude {
 
 impl Altitude {
     const fn decode_barometric_altitude(value: i32) -> Feet {
-        Feet(value * BAROMETRIC_ALTITUDE_STEP - ALTITUDE_OFFSET_FT)
+        Feet::new(value * BAROMETRIC_ALTITUDE_STEP - ALTITUDE_OFFSET_FT)
     }
 
     const fn remove_qbit(value: i32) -> i32 {
@@ -118,9 +118,22 @@ impl TryFrom<&RawFrame> for Altitude {
                     Ok(Self::Barometric(Self::decode_barometric_altitude(n)))
                 } else {
                     let (gc500, gc100) = Self::reorder_gillham_bits(encoded_altitude);
+                    let b500 = Self::gray_to_binary(gc500);
+                    let coarse_altitude = Self::decode_coarse_altitude(b500);
+                    let fine_adjustment = Self::decode_fine_adjustment(b500, gc100)?;
+                    Ok(Self::Barometric(Feet::new(
+                        coarse_altitude + fine_adjustment,
+                    )))
                 }
             }
-            20..=22 => Ok(Self::Geometric(777)),
+            20..=22 => {
+                let encoded_altitude = frame.bits_as::<i32>(FIELD_ENCODED_ALTITUDE)?;
+                if encoded_altitude == 0 {
+                    Ok(Self::Unavailable)
+                } else {
+                    Ok(Self::Geometric(Meters(encoded_altitude)))
+                }
+            }
             _ => Err(AdsbError::UnsupportedTypeCode(frame.type_code().value())),
         }
     }

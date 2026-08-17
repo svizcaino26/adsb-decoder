@@ -24,4 +24,7 @@ pub enum AdsbError {
 
     #[error("Failed to convert extracted bits to target type")]
     InvalidBitConversion,
+
+    #[error("Invalid Gillham encoding")]
+    InvalidGillhamCode,
 }
