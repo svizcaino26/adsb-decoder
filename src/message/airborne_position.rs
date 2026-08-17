@@ -75,6 +75,14 @@ impl Altitude {
 
         (gc500, gc100)
     }
+
+    const fn gray_to_binary(mut value: i32) -> i32 {
+        value ^= value >> 1;
+        value ^= value >> 2;
+        value ^= value >> 4;
+
+        value
+    }
 }
 
 impl TryFrom<&RawFrame> for Altitude {
