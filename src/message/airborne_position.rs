@@ -88,6 +88,20 @@ impl Altitude {
         (b500 - 2) * COARSE_ALTITUDE_STEP
     }
 
+    const fn decode_fine_adjustment(b500: i32, gc100: i32) -> Result<i32, AdsbError> {
+        let parity = b500 & 1;
+
+        match (parity, gc100) {
+            (0, 0b001) => Ok(100),
+            (0, 0b011) => Ok(300),
+            (0, 0b101) => Ok(500),
+            (1, 0b000) => Ok(600),
+            (1, 0b010) => Ok(0),
+            (1, 0b100) => Ok(200),
+            (1, 0b110) => Ok(400),
+            _ => Err(AdsbError::InvalidGillhamCode),
+        }
+    }
 }
 
 impl TryFrom<&RawFrame> for Altitude {
