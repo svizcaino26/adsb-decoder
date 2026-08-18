@@ -15,6 +15,7 @@ const FIELD_ENCODED_LATITUDE: RangeInclusive<u8> = 55..=71;
 const FIELD_ENCODED_LONGITUDE: RangeInclusive<u8> = 72..=88;
 const CPR_SCALE: f64 = 131_072.0;
 
+#[derive(Debug)]
 pub struct Feet(i32);
 
 impl Feet {
@@ -27,8 +28,10 @@ impl Feet {
     }
 }
 
+#[derive(Debug)]
 pub struct Meters(i32);
 
+#[derive(Debug)]
 pub enum Altitude {
     Barometric(Feet),
     Geometric(Meters),
@@ -143,16 +146,19 @@ impl TryFrom<&RawFrame> for Altitude {
     }
 }
 
+#[derive(Debug)]
 pub struct Odd {
     lat_cpr: u32,
     lon_cpr: u32,
 }
 
+#[derive(Debug)]
 pub struct Even {
     lat_cpr: u32,
     lon_cpr: u32,
 }
 
+#[derive(Debug)]
 pub enum Cpr {
     Even(Even),
     Odd(Odd),
@@ -172,13 +178,20 @@ impl TryFrom<&RawFrame> for Cpr {
     }
 }
 
-pub struct Position {
+#[derive(Debug)]
+pub struct AirbornePosition {
     latitude: f64,
     longitude: f64,
 }
 
-impl Position {
+impl AirbornePosition {
     const fn latitude_zone_index() {}
+    const fn decode_global_position(odd: &Odd, even: &Even) -> Self {
+        Self {
+            latitude: 1.0,
+            longitude: 1.0,
+        }
+    }
 }
 
 #[derive(Debug)]
