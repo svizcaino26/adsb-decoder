@@ -10,6 +10,10 @@ const COARSE_ALTITUDE_STEP: i32 = 500;
 const ALTITUDE_OFFSET_FT: i32 = 1000;
 const FIELD_ENCODED_ALTITUDE: RangeInclusive<u8> = 41..=52;
 const ALTITUDE_QBIT: RangeInclusive<u8> = 48..=48;
+const FIELD_CPR_FORMAT: RangeInclusive<u8> = 54..=54;
+const FIELD_ENCODED_LATITUDE: RangeInclusive<u8> = 55..=71;
+const FIELD_ENCODED_LONGITUDE: RangeInclusive<u8> = 72..=88;
+const CPR_SCALE: f64 = 131_072.0;
 
 pub struct Feet(i32);
 
@@ -137,6 +141,44 @@ impl TryFrom<&RawFrame> for Altitude {
             _ => Err(AdsbError::UnsupportedTypeCode(frame.type_code().value())),
         }
     }
+}
+
+pub struct Odd {
+    lat_cpr: u32,
+    lon_cpr: u32,
+}
+
+pub struct Even {
+    lat_cpr: u32,
+    lon_cpr: u32,
+}
+
+pub enum Cpr {
+    Even(Even),
+    Odd(Odd),
+}
+
+impl TryFrom<&RawFrame> for Cpr {
+    type Error = AdsbError;
+
+    fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
+        let lat_cpr = frame.bits_as::<u32>(FIELD_ENCODED_LATITUDE)?;
+        let lon_cpr = frame.bits_as::<u32>(FIELD_ENCODED_LONGITUDE)?;
+        match frame.bits_as::<u8>(FIELD_CPR_FORMAT)? {
+            0 => Ok(Self::Even(Even { lat_cpr, lon_cpr })),
+            1 => Ok(Self::Odd(Odd { lat_cpr, lon_cpr })),
+            format => Err(AdsbError::InvalidCprFormat(format)),
+        }
+    }
+}
+
+pub struct Position {
+    latitude: f64,
+    longitude: f64,
+}
+
+impl Position {
+    const fn latitude_zone_index() {}
 }
 
 pub struct AirbornePosition {

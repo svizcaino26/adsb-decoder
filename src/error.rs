@@ -27,4 +27,7 @@ pub enum AdsbError {
 
     #[error("Invalid Gillham encoding")]
     InvalidGillhamCode,
+
+    #[error("Invalid CPR format {0}")]
+    InvalidCprFormat(u8),
 }
