@@ -181,17 +181,18 @@ impl Position {
     const fn latitude_zone_index() {}
 }
 
-pub struct AirbornePosition {
-    icao_address: IcaoAddress,
+#[derive(Debug)]
+pub struct AircraftAltitude {
+    pub icao: IcaoAddress,
     altitude: Altitude,
 }
 
-impl TryFrom<&RawFrame> for AirbornePosition {
+impl TryFrom<&RawFrame> for AircraftAltitude {
     type Error = AdsbError;
     fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
         let altitude = Altitude::try_from(frame)?;
         Ok(Self {
-            icao_address: frame.icao(),
+            icao: frame.icao(),
             altitude,
         })
     }
