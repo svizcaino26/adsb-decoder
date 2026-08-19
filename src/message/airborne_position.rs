@@ -14,6 +14,9 @@ const FIELD_CPR_FORMAT: RangeInclusive<u8> = 54..=54;
 const FIELD_ENCODED_LATITUDE: RangeInclusive<u8> = 55..=71;
 const FIELD_ENCODED_LONGITUDE: RangeInclusive<u8> = 72..=88;
 const CPR_SCALE: f64 = 131_072.0;
+const NZ: f64 = 15.0;
+const EVEN_LAT_ZONE_SIZE: f64 = 360.0 / 4.0 * NZ;
+const ODD_LAT_ZONE_SIZE: f64 = 360.0 / (4.0 * NZ - 1.0);
 
 #[derive(Debug)]
 pub struct Feet(i32);
@@ -200,6 +203,28 @@ impl AirbornePosition {
         let lat_cpr_odd = f64::from(odd.lat_cpr) / CPR_SCALE;
 
         f64::floor(59.0 * lat_cpr_even - 60.0 * lat_cpr_odd + 0.5) as i32
+    }
+
+    /// Normalizes the latitude value in the range `[-90, +90]`
+    fn normalize_latitude(lat: f64) -> f64 {
+        if lat >= 270.0 {
+            lat - 360.0
+        } else {
+            lat
+        }
+    }
+
+    fn decode_latitude(even: &Even, odd: &Odd, j_index: i32) -> (f64, f64) {
+        let lat_cpr_even = f64::from(even.lat_cpr) / CPR_SCALE;
+        let lat_cpr_odd = f64::from(odd.lat_cpr) / CPR_SCALE;
+
+        let lat_even = EVEN_LAT_ZONE_SIZE * (f64::from(j_index) % 60.0 + lat_cpr_even);
+        let lat_odd = ODD_LAT_ZONE_SIZE * (f64::from(j_index) % 59.0 + lat_cpr_odd);
+
+        (
+            Self::normalize_latitude(lat_even),
+            Self::normalize_latitude(lat_odd),
+        )
     }
 
     const fn decode_global_position(odd: &Odd, even: &Even) -> Result<Self, AdsbError> {
