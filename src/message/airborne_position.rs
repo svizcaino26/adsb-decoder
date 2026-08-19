@@ -227,8 +227,8 @@ impl AirbornePosition {
         )
     }
 
-    const fn decode_global_position(odd: &Odd, even: &Even) -> Result<Self, AdsbError> {
-        let j = Self::latitude_zone_index(odd, even);
+    const fn decode_global_position(even: &Even, odd: &Odd) -> Result<Self, AdsbError> {
+        let j = Self::latitude_zone_index(even, odd);
         Ok(Self {
             latitude: 1.0,
             longitude: 1.0,
