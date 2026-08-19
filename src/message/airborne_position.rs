@@ -195,16 +195,11 @@ pub struct AirbornePosition {
 }
 
 impl AirbornePosition {
-    #[allow(
-        clippy::as_conversions,
-        clippy::cast_precision_loss,
-        clippy::cast_possible_truncation
-    )]
-    const fn latitude_zone_index(odd: &Odd, even: &Even) -> i32 {
-        let lat_even = even.lat_cpr as f64 / CPR_SCALE;
-        let lat_odd = odd.lat_cpr as f64 / CPR_SCALE;
+    fn latitude_zone_index(even: &Even, odd: &Odd) -> i32 {
+        let lat_cpr_even = f64::from(even.lat_cpr) / CPR_SCALE;
+        let lat_cpr_odd = f64::from(odd.lat_cpr) / CPR_SCALE;
 
-        f64::floor(59.0 * lat_even - 60.0 * lat_odd + 0.5) as i32
+        f64::floor(59.0 * lat_cpr_even - 60.0 * lat_cpr_odd + 0.5) as i32
     }
 
     const fn decode_global_position(odd: &Odd, even: &Even) -> Result<Self, AdsbError> {
