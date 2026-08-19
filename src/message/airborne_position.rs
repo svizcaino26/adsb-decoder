@@ -1,4 +1,4 @@
-use std::ops::RangeInclusive;
+use std::{ops::RangeInclusive, time::Instant};
 
 use crate::{
     error::AdsbError,
@@ -150,12 +150,14 @@ impl TryFrom<&RawFrame> for Altitude {
 pub struct Odd {
     lat_cpr: u32,
     lon_cpr: u32,
+    time: Instant,
 }
 
 #[derive(Debug)]
 pub struct Even {
     lat_cpr: u32,
     lon_cpr: u32,
+    time: Instant,
 }
 
 #[derive(Debug)]
@@ -164,15 +166,23 @@ pub enum Cpr {
     Odd(Odd),
 }
 
-impl TryFrom<&RawFrame> for Cpr {
+impl TryFrom<(&RawFrame, Instant)> for Cpr {
     type Error = AdsbError;
 
-    fn try_from(frame: &RawFrame) -> Result<Self, Self::Error> {
+    fn try_from((frame, time): (&RawFrame, Instant)) -> Result<Self, Self::Error> {
         let lat_cpr = frame.bits_as::<u32>(FIELD_ENCODED_LATITUDE)?;
         let lon_cpr = frame.bits_as::<u32>(FIELD_ENCODED_LONGITUDE)?;
         match frame.bits_as::<u8>(FIELD_CPR_FORMAT)? {
-            0 => Ok(Self::Even(Even { lat_cpr, lon_cpr })),
-            1 => Ok(Self::Odd(Odd { lat_cpr, lon_cpr })),
+            0 => Ok(Self::Even(Even {
+                lat_cpr,
+                lon_cpr,
+                time,
+            })),
+            1 => Ok(Self::Odd(Odd {
+                lat_cpr,
+                lon_cpr,
+                time,
+            })),
             format => Err(AdsbError::InvalidCprFormat(format)),
         }
     }
