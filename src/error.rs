@@ -30,4 +30,7 @@ pub enum AdsbError {
 
     #[error("Invalid CPR format {0}")]
     InvalidCprFormat(u8),
+
+    #[error("Mismatched latitudes")]
+    MismatchedLatitude,
 }

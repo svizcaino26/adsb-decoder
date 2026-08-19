@@ -1,4 +1,4 @@
-use std::{ops::RangeInclusive, time::Instant};
+use std::{f64::consts::PI, ops::RangeInclusive, time::Instant};
 
 use crate::{
     error::AdsbError,
@@ -192,17 +192,19 @@ impl TryFrom<(&RawFrame, Instant)> for Cpr {
 }
 
 #[derive(Debug)]
-pub struct AirbornePosition {
+pub struct Position {
     latitude: f64,
     longitude: f64,
 }
 
-impl AirbornePosition {
+impl Position {
+    #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
     fn latitude_zone_index(even: &Even, odd: &Odd) -> i32 {
         let lat_cpr_even = f64::from(even.lat_cpr) / CPR_SCALE;
         let lat_cpr_odd = f64::from(odd.lat_cpr) / CPR_SCALE;
 
-        f64::floor(59.0 * lat_cpr_even - 60.0 * lat_cpr_odd + 0.5) as i32
+        // f64::floor(59.0 * lat_cpr_even - 60.0 * lat_cpr_odd + 0.5) as i32
+        f64::floor(60.0f64.mul_add(-lat_cpr_odd, 59.0 * lat_cpr_even) + 0.5) as i32
     }
 
     /// Normalizes the latitude value in the range `[-90, +90]`
@@ -242,10 +244,34 @@ impl AirbornePosition {
         }
     }
 
-    const fn decode_global_position(even: &Even, odd: &Odd) -> Result<Self, AdsbError> {
-        let j = Self::latitude_zone_index(even, odd);
+    fn is_same_latitude(lat_even: f64, lat_odd: f64) -> Result<(), AdsbError> {
+        let nl_lat_even = Self::longitude_zone_number(lat_even);
+        let nl_lat_odd = Self::longitude_zone_number(lat_odd);
+
+        if nl_lat_even != nl_lat_odd {
+            return Err(AdsbError::MismatchedLatitude);
+        }
+
+        Ok(())
+    }
+
+    fn select_latitude(lat_even: f64, lat_odd: f64, time_even: Instant, time_odd: Instant) -> f64 {
+        if time_even >= time_odd {
+            lat_even
+        } else {
+            lat_odd
+        }
+    }
+
+    fn decode_global_position(even: &Even, odd: &Odd) -> Result<Self, AdsbError> {
+        let j_index = Self::latitude_zone_index(even, odd);
+        let (lat_even, lat_odd) = Self::decode_latitude(even, odd, j_index);
+
+        Self::is_same_latitude(lat_even, lat_odd)?;
+
+        let latitude = Self::select_latitude(lat_even, lat_odd, even.time, odd.time);
         Ok(Self {
-            latitude: 1.0,
+            latitude,
             longitude: 1.0,
         })
     }
