@@ -227,6 +227,21 @@ impl AirbornePosition {
         )
     }
 
+    #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
+    fn longitude_zone_number(lat: f64) -> i32 {
+        match lat {
+            0.0 => 59,
+            87.0 | -87.0 => 2,
+            lat if !(-87.0..=87.0).contains(&lat) => 1,
+            lat => {
+                let numerator = 1.0 - f64::cos(PI / (2.0 * NZ));
+                let denominator = f64::cos(PI / 180.0 * lat).powi(2);
+
+                f64::floor(2.0 * PI / f64::acos(1.0 - numerator / denominator)) as i32
+            }
+        }
+    }
+
     const fn decode_global_position(even: &Even, odd: &Odd) -> Result<Self, AdsbError> {
         let j = Self::latitude_zone_index(even, odd);
         Ok(Self {
