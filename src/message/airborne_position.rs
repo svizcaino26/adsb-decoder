@@ -207,6 +207,16 @@ impl Position {
         f64::floor(60.0f64.mul_add(-lat_cpr_odd, 59.0 * lat_cpr_even) + 0.5) as i32
     }
 
+    #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
+    fn longitude_zone_index(even: &Even, odd: &Odd, lat_record: f64) -> i32 {
+        let lon_cpr_even = f64::from(even.lon_cpr) / CPR_SCALE;
+        let lon_cpr_odd = f64::from(odd.lon_cpr) / CPR_SCALE;
+
+        let nl_lat = f64::from(Self::longitude_zone_number(lat_record));
+
+        f64::floor(lon_cpr_odd.mul_add(-nl_lat, lon_cpr_even * (nl_lat - 1.0)) + 0.5) as i32
+    }
+
     /// Normalizes the latitude value in the range `[-90, +90]`
     fn normalize_latitude(lat: f64) -> f64 {
         if lat >= 270.0 {
