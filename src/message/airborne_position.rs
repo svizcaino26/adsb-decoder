@@ -291,6 +291,14 @@ impl Position {
         )
     }
 
+    fn normalize_longitude(lon: f64) -> f64 {
+        if lon >= 180.0 {
+            lon - 360.0
+        } else {
+            lon
+        }
+    }
+
     fn decode_global_position(even: &Even, odd: &Odd) -> Result<Self, AdsbError> {
         let j_index = Self::latitude_zone_index(even, odd);
         let (lat_even, lat_odd) = Self::decode_latitude(even, odd, j_index);
