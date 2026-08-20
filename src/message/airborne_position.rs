@@ -1,4 +1,4 @@
-use std::{f64::consts::PI, ops::RangeInclusive, time::Instant};
+use std::{cmp::max, f64::consts::PI, ops::RangeInclusive, time::Instant};
 
 use crate::{
     error::AdsbError,
@@ -208,11 +208,11 @@ impl Position {
     }
 
     #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
-    fn longitude_zone_index(even: &Even, odd: &Odd, lat_record: f64) -> i32 {
+    fn longitude_zone_index(even: &Even, odd: &Odd, nl_lat: i32) -> i32 {
         let lon_cpr_even = f64::from(even.lon_cpr) / CPR_SCALE;
         let lon_cpr_odd = f64::from(odd.lon_cpr) / CPR_SCALE;
 
-        let nl_lat = f64::from(Self::longitude_zone_number(lat_record));
+        let nl_lat = f64::from(nl_lat);
 
         f64::floor(lon_cpr_odd.mul_add(-nl_lat, lon_cpr_even * (nl_lat - 1.0)) + 0.5) as i32
     }
@@ -299,6 +299,14 @@ impl Position {
         }
     }
 
+    fn select_longitude(lon_even: f64, lon_odd: f64, time_even: Instant, time_odd: Instant) -> f64 {
+        if time_even >= time_odd {
+            lon_even
+        } else {
+            lon_odd
+        }
+    }
+
     fn decode_global_position(even: &Even, odd: &Odd) -> Result<Self, AdsbError> {
         let j_index = Self::latitude_zone_index(even, odd);
         let (lat_even, lat_odd) = Self::decode_latitude(even, odd, j_index);
@@ -309,9 +317,12 @@ impl Position {
         let nl_lat = Self::longitude_zone_number(latitude);
         let m_index = Self::longitude_zone_index(even, odd, nl_lat);
         let (lon_even, lon_odd) = Self::decode_longitude(even, odd, m_index, nl_lat);
+
+        let longitude = Self::select_longitude(lon_even, lon_odd, even.time, odd.time);
+
         Ok(Self {
             latitude,
-            longitude: 1.0,
+            longitude,
         })
     }
 }
