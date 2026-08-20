@@ -273,6 +273,24 @@ impl Position {
         }
     }
 
+    fn decode_longitude(even: &Even, odd: &Odd, m_index: i32, nl_lat: i32) -> (f64, f64) {
+        let n_even = max(nl_lat, 1);
+        let n_odd = max(nl_lat - 1, 1);
+
+        let (dlon_even, dlon_odd) = (360.0 / f64::from(n_even), 360.0 / f64::from(n_odd));
+
+        let lon_cpr_even = f64::from(even.lon_cpr) / CPR_SCALE;
+        let lon_cpr_odd = f64::from(odd.lon_cpr) / CPR_SCALE;
+
+        let lon_even = dlon_even * (f64::from(m_index % n_even) + lon_cpr_even);
+        let lon_odd = dlon_odd * (f64::from(m_index % n_odd) + lon_cpr_odd);
+
+        (
+            Self::normalize_longitude(lon_even),
+            Self::normalize_longitude(lon_odd),
+        )
+    }
+
     fn decode_global_position(even: &Even, odd: &Odd) -> Result<Self, AdsbError> {
         let j_index = Self::latitude_zone_index(even, odd);
         let (lat_even, lat_odd) = Self::decode_latitude(even, odd, j_index);
@@ -280,6 +298,9 @@ impl Position {
         Self::is_same_latitude(lat_even, lat_odd)?;
 
         let latitude = Self::select_latitude(lat_even, lat_odd, even.time, odd.time);
+        let nl_lat = Self::longitude_zone_number(latitude);
+        let m_index = Self::longitude_zone_index(even, odd, nl_lat);
+        let (lon_even, lon_odd) = Self::decode_longitude(even, odd, m_index, nl_lat);
         Ok(Self {
             latitude,
             longitude: 1.0,
