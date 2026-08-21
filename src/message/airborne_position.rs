@@ -26,7 +26,8 @@ impl Feet {
         Self(value)
     }
 
-    const fn value(self) -> i32 {
+    /// Returns the altitude in feet.
+    pub const fn value(self) -> i32 {
         self.0
     }
 }
