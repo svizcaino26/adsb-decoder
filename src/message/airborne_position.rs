@@ -35,6 +35,16 @@ impl Feet {
 #[derive(Debug)]
 pub struct Meters(i32);
 
+impl Meters {
+    const fn new(value: i32) -> Self {
+        Self(value)
+    }
+
+    pub const fn value(self) -> i32 {
+        self.0
+    }
+}
+
 #[derive(Debug)]
 pub enum Altitude {
     Barometric(Feet),
@@ -142,7 +152,7 @@ impl TryFrom<&RawFrame> for Altitude {
                 if encoded_altitude == 0 {
                     Ok(Self::Unavailable)
                 } else {
-                    Ok(Self::Geometric(Meters(encoded_altitude)))
+                    Ok(Self::Geometric(Meters::new(encoded_altitude)))
                 }
             }
             _ => Err(AdsbError::UnsupportedTypeCode(frame.type_code().value())),
