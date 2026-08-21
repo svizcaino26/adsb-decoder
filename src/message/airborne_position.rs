@@ -1,3 +1,20 @@
+//! Decoding of ADS-B airborne position and altitude messages.
+//!
+//! This module implements decoding of:
+//!
+//! - barometric and geometric altitude;
+//! - Compact Position Reporting (CPR) latitude;
+//! - CPR longitude;
+//! - global aircraft position from an even/odd CPR message pair.
+//!
+//! Global CPR decoding requires an even and odd airborne position message
+//! from the same aircraft. The reception time of each message is used to
+//! select the position corresponding to the most recent message.
+//!
+//! The implementation follows:
+//! - ICAO Annex 10, Volume IV
+//! - Junzi Sun, *The 1090 Megahertz Riddle*
+//!   <https://mode-s.org/1090mhz/content/ads-b/3-airborne-position.html>
 use std::{cmp::max, f64::consts::PI, ops::RangeInclusive, time::Instant};
 
 use crate::{
@@ -18,6 +35,7 @@ const NZ: f64 = 15.0;
 const EVEN_LAT_ZONE_SIZE: f64 = 360.0 / 4.0 * NZ;
 const ODD_LAT_ZONE_SIZE: f64 = 360.0 / (4.0 * NZ - 1.0);
 
+/// Altitude expressed in feet.
 #[derive(Debug)]
 pub struct Feet(i32);
 
@@ -32,6 +50,7 @@ impl Feet {
     }
 }
 
+/// Altitude expressed in meters.
 #[derive(Debug)]
 pub struct Meters(i32);
 
@@ -40,15 +59,27 @@ impl Meters {
         Self(value)
     }
 
+    /// Returns the altitude in meters.
     pub const fn value(self) -> i32 {
         self.0
     }
 }
 
+/// Altitude decoded from an ADS-B airborne position message.
+///
+/// Barometric altitude is reported in feet, while geometric altitude
+/// is reported in meters. `Unavailable` indicates that the encoded
+/// altitude field does not contain a usable value.
 #[derive(Debug)]
 pub enum Altitude {
+    /// Barometric altitude encoded using either the Q-bit representation
+    /// or Gillham code.
     Barometric(Feet),
+
+    /// Geometric altitude reported by the GNSS-related message types.
     Geometric(Meters),
+
+    /// The message does not contain a usable altitude.
     Unavailable,
 }
 
@@ -160,6 +191,10 @@ impl TryFrom<&RawFrame> for Altitude {
     }
 }
 
+/// CPR data extracted from an odd-format airborne position message.
+///
+/// The even and odd messages are required as a pair for global CPR
+/// position decoding.
 #[derive(Debug)]
 pub struct Odd {
     lat_cpr: u32,
@@ -167,6 +202,10 @@ pub struct Odd {
     time: Instant,
 }
 
+/// CPR data extracted from an even-format airborne position message.
+///
+/// The even and odd messages are required as a pair for global CPR
+/// position decoding.
 #[derive(Debug)]
 pub struct Even {
     lat_cpr: u32,
@@ -174,15 +213,26 @@ pub struct Even {
     time: Instant,
 }
 
+/// Compact Position Reporting data extracted from an airborne position
+/// message.
+///
+/// A global position is decoded by combining an even and an odd CPR
+/// message from the same aircraft.
 #[derive(Debug)]
 pub enum Cpr {
+    /// CPR frame using the even format.
     Even(Even),
+
+    /// CPR frame using the odd format.
     Odd(Odd),
 }
 
 impl TryFrom<(&RawFrame, Instant)> for Cpr {
     type Error = AdsbError;
 
+    /// The supplied timestamp represents the reception time of the frame and is used
+    /// during globaal CPR decoding to select the position corresponding to the
+    /// most recent message.
     fn try_from((frame, time): (&RawFrame, Instant)) -> Result<Self, Self::Error> {
         let lat_cpr = frame.bits_as::<u32>(FIELD_ENCODED_LATITUDE)?;
         let lon_cpr = frame.bits_as::<u32>(FIELD_ENCODED_LONGITUDE)?;
@@ -202,6 +252,12 @@ impl TryFrom<(&RawFrame, Instant)> for Cpr {
     }
 }
 
+/// Geographical position decoded from a pair of ADS-B airborne position
+/// messages using Compact Position Reporting (CPR).
+///
+/// A global position requires one even-format and one odd-format CPR
+/// message. The messages must belong to the same latitude zone; otherwise
+/// decoding fails.
 #[derive(Debug)]
 pub struct Position {
     latitude: f64,
@@ -209,15 +265,17 @@ pub struct Position {
 }
 
 impl Position {
+    /// Calculates the CPR latitude zone index `j` from an even/odd message pair.
     #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
     fn latitude_zone_index(even: &Even, odd: &Odd) -> i32 {
         let lat_cpr_even = f64::from(even.lat_cpr) / CPR_SCALE;
         let lat_cpr_odd = f64::from(odd.lat_cpr) / CPR_SCALE;
 
-        // f64::floor(59.0 * lat_cpr_even - 60.0 * lat_cpr_odd + 0.5) as i32
         f64::floor(60.0f64.mul_add(-lat_cpr_odd, 59.0 * lat_cpr_even) + 0.5) as i32
     }
 
+    /// Calculates the CPR longitude zone index `m` using the latitude zone
+    /// number of the decoded position.
     #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
     fn longitude_zone_index(even: &Even, odd: &Odd, nl_lat: i32) -> i32 {
         let lon_cpr_even = f64::from(even.lon_cpr) / CPR_SCALE;
@@ -250,6 +308,11 @@ impl Position {
         )
     }
 
+    /// Calculates `NL(lat)`, the number of longitude zones at a given latitude.
+    ///
+    /// `NL` decreases toward the poles because the CPR longitude zone width
+    /// increases as latitude increases in magnitude. Special cases are used
+    /// at the equator and near the poles as defined by the CPR specification.
     #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
     fn longitude_zone_number(lat: f64) -> i32 {
         match lat {
@@ -265,7 +328,13 @@ impl Position {
         }
     }
 
-    fn is_same_latitude(lat_even: f64, lat_odd: f64) -> Result<(), AdsbError> {
+    /// Checks that the even and odd latitude solutions belong to the same
+    /// CPR latitude zone.
+    ///
+    /// Global CPR decoding is invalid when the two messages correspond to
+    /// different latitude zones and a new pair of messages needs to be used
+    /// this usually happens when crossing latitude-zone boundary.
+    fn is_same_latitude_zone(lat_even: f64, lat_odd: f64) -> Result<(), AdsbError> {
         let nl_lat_even = Self::longitude_zone_number(lat_even);
         let nl_lat_odd = Self::longitude_zone_number(lat_odd);
 
@@ -276,6 +345,12 @@ impl Position {
         Ok(())
     }
 
+    /// Selects the position corresponding to the most recently received CPR
+    /// message.
+    ///
+    /// Even and odd CPR messages are transmitted independently, so their
+    /// timestamps determine which decoded latitude should be used for the
+    /// final position.
     fn select_latitude(lat_even: f64, lat_odd: f64, time_even: Instant, time_odd: Instant) -> f64 {
         if time_even >= time_odd {
             lat_even
@@ -310,6 +385,12 @@ impl Position {
         }
     }
 
+    /// Selects the position corresponding to the most recently received CPR
+    /// message.
+    ///
+    /// Even and odd CPR messages are transmitted independently, so their
+    /// timestamps determine which decoded latitude should be used for the
+    /// final position.
     fn select_longitude(lon_even: f64, lon_odd: f64, time_even: Instant, time_odd: Instant) -> f64 {
         if time_even >= time_odd {
             lon_even
@@ -318,11 +399,24 @@ impl Position {
         }
     }
 
+    /// Decodes a global position from an even/odd CPR message pair.
+    ///
+    /// The decoding process:
+    ///
+    /// 1. Calculates the latitude zone index.
+    /// 2. Decodes the latitude from both messages.
+    /// 3. Verifies that both latitude solutions belong to the same zone.
+    /// 4. Selects the latitude from the most recent message.
+    /// 5. Calculates the longitude zone index using the selected latitude.
+    /// 6. Decodes the longitude from both messages.
+    /// 7. Selects the longitude from the most recent message.
+    ///
+    /// Returns an error if the two messages belong to different latitude zones.
     fn decode_global_position(even: &Even, odd: &Odd) -> Result<Self, AdsbError> {
         let j_index = Self::latitude_zone_index(even, odd);
         let (lat_even, lat_odd) = Self::decode_latitude(even, odd, j_index);
 
-        Self::is_same_latitude(lat_even, lat_odd)?;
+        Self::is_same_latitude_zone(lat_even, lat_odd)?;
 
         let latitude = Self::select_latitude(lat_even, lat_odd, even.time, odd.time);
         let nl_lat = Self::longitude_zone_number(latitude);
@@ -352,6 +446,7 @@ impl Position {
     }
 }
 
+/// Associates a decoded altitude with the aircraft that transmitted it.
 #[derive(Debug)]
 pub struct AircraftAltitude {
     pub icao: IcaoAddress,
