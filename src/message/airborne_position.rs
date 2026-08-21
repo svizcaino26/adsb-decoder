@@ -336,6 +336,20 @@ impl Position {
             longitude,
         })
     }
+
+    /// Returns the latitude in degrees.
+    ///
+    /// The value is in the range `[-90.0, 90.0]`.
+    pub const fn latitude(&self) -> f64 {
+        self.latitude
+    }
+
+    /// Returns the longitude in degrees.
+    ///
+    /// The value is in the range `[-180.0, 180.0)`.
+    pub const fn longitude(&self) -> f64 {
+        self.longitude
+    }
 }
 
 #[derive(Debug)]
