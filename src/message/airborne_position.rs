@@ -32,7 +32,7 @@ const FIELD_ENCODED_LATITUDE: RangeInclusive<u8> = 55..=71;
 const FIELD_ENCODED_LONGITUDE: RangeInclusive<u8> = 72..=88;
 const CPR_SCALE: f64 = 131_072.0;
 const NZ: f64 = 15.0;
-const EVEN_LAT_ZONE_SIZE: f64 = 360.0 / 4.0 * NZ;
+const EVEN_LAT_ZONE_SIZE: f64 = 360.0 / (4.0 * NZ);
 const ODD_LAT_ZONE_SIZE: f64 = 360.0 / (4.0 * NZ - 1.0);
 
 /// Altitude expressed in feet.
