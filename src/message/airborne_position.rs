@@ -40,10 +40,6 @@ const ODD_LAT_ZONE_SIZE: f64 = 360.0 / (4.0 * NZ - 1.0);
 pub struct Feet(i32);
 
 impl Feet {
-    const fn new(value: i32) -> Self {
-        Self(value)
-    }
-
     /// Returns the altitude in feet.
     pub const fn value(self) -> i32 {
         self.0
@@ -55,10 +51,6 @@ impl Feet {
 pub struct Meters(i32);
 
 impl Meters {
-    const fn new(value: i32) -> Self {
-        Self(value)
-    }
-
     /// Returns the altitude in meters.
     pub const fn value(self) -> i32 {
         self.0
@@ -85,7 +77,7 @@ pub enum Altitude {
 
 impl Altitude {
     const fn decode_barometric_altitude(value: i32) -> Feet {
-        Feet::new(value * BAROMETRIC_ALTITUDE_STEP - ALTITUDE_OFFSET_FT)
+        Feet(value * BAROMETRIC_ALTITUDE_STEP - ALTITUDE_OFFSET_FT)
     }
 
     const fn remove_qbit(value: i32) -> i32 {
@@ -173,9 +165,7 @@ impl TryFrom<&RawFrame> for Altitude {
                     let b500 = Self::gray_to_binary(gc500);
                     let coarse_altitude = Self::decode_coarse_altitude(b500);
                     let fine_adjustment = Self::decode_fine_adjustment(b500, gc100)?;
-                    Ok(Self::Barometric(Feet::new(
-                        coarse_altitude + fine_adjustment,
-                    )))
+                    Ok(Self::Barometric(Feet(coarse_altitude + fine_adjustment)))
                 }
             }
             20..=22 => {
@@ -183,7 +173,7 @@ impl TryFrom<&RawFrame> for Altitude {
                 if encoded_altitude == 0 {
                     Ok(Self::Unavailable)
                 } else {
-                    Ok(Self::Geometric(Meters::new(encoded_altitude)))
+                    Ok(Self::Geometric(Meters(encoded_altitude)))
                 }
             }
             _ => Err(AdsbError::UnsupportedTypeCode(frame.type_code().value())),
