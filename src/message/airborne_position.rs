@@ -463,3 +463,36 @@ impl TryFrom<&RawFrame> for AircraftAltitude {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use crate::frame::RawFrame;
+
+    use super::*;
+
+    #[test]
+    #[allow(clippy::unwrap_used, clippy::panic)]
+    fn decode_global_position() {
+        let even_frame = RawFrame::from_hex("8D40621D58C382D690C8AC2863A7").unwrap();
+        let odd_frame = RawFrame::from_hex("8D40621D58C386435CC412692AD6").unwrap();
+
+        let now = Instant::now();
+
+        let Cpr::Even(even) = Cpr::try_from((&even_frame, now)).unwrap() else {
+            panic!("expected even CPR message");
+        };
+
+        let Cpr::Odd(odd) =
+            Cpr::try_from((&odd_frame, now.checked_sub(Duration::from_secs(1)).unwrap())).unwrap()
+        else {
+            panic!("expected odd CPR message");
+        };
+
+        let position = Position::decode_global_position(&even, &odd).unwrap();
+
+        assert!((position.latitude() - 52.257_202).abs() < 0.000_001_1);
+        assert!((position.longitude() - 3.919_372).abs() < 0.000_001_1);
+    }
+}
