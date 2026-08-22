@@ -412,7 +412,7 @@ impl Position {
     /// 7. Selects the longitude from the most recent message.
     ///
     /// Returns an error if the two messages belong to different latitude zones.
-    fn decode_global_position(even: &Even, odd: &Odd) -> Result<Self, AdsbError> {
+    pub fn decode_global_position(even: &Even, odd: &Odd) -> Result<Self, AdsbError> {
         let j_index = Self::latitude_zone_index(even, odd);
         let (lat_even, lat_odd) = Self::decode_latitude(even, odd, j_index);
 
@@ -494,5 +494,20 @@ mod tests {
 
         assert!((position.latitude() - 52.257_202).abs() < 0.000_001_1);
         assert!((position.longitude() - 3.919_372).abs() < 0.000_001_1);
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used, clippy::panic)]
+    fn decode_barometric_altitude() {
+        let frame = RawFrame::from_hex("8D40621D58C382D690C8AC2863A7").unwrap();
+
+        let altitude = Altitude::try_from(&frame).unwrap();
+
+        match altitude {
+            Altitude::Barometric(feet) => {
+                assert_eq!(feet.value(), 38_000);
+            }
+            _ => panic!("expected barometric altitude"),
+        }
     }
 }
