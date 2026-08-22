@@ -242,6 +242,26 @@ impl TryFrom<(&RawFrame, Instant)> for Cpr {
     }
 }
 
+/// Latitude normalized to the range `[-90.0, 90.0]` degrees.
+#[derive(Debug, Clone, Copy)]
+pub struct NormalizedLatitude(f64);
+
+impl From<NormalizedLatitude> for f64 {
+    fn from(val: NormalizedLatitude) -> Self {
+        val.0
+    }
+}
+
+/// Longitude normalized to the range `[-180.0, 180.0)` degrees.
+#[derive(Debug, Clone, Copy)]
+pub struct NormalizedLongitude(f64);
+
+impl From<NormalizedLongitude> for f64 {
+    fn from(val: NormalizedLongitude) -> Self {
+        val.0
+    }
+}
+
 /// Geographical position decoded from a pair of ADS-B airborne position
 /// messages using Compact Position Reporting (CPR).
 ///
@@ -250,8 +270,8 @@ impl TryFrom<(&RawFrame, Instant)> for Cpr {
 /// decoding fails.
 #[derive(Debug)]
 pub struct Position {
-    latitude: f64,
-    longitude: f64,
+    latitude: NormalizedLatitude,
+    longitude: NormalizedLongitude,
 }
 
 impl Position {
@@ -276,16 +296,23 @@ impl Position {
         f64::floor(lon_cpr_odd.mul_add(-nl_lat, lon_cpr_even * (nl_lat - 1.0)) + 0.5) as i32
     }
 
-    /// Normalizes the latitude value in the range `[-90, +90]`
-    fn normalize_latitude(lat: f64) -> f64 {
+    /// Converts a CPR latitude into the normalized range `[-90, 90]`.
+    ///
+    /// The input is expected to be the result of the CPR latitude decoding
+    /// formula.
+    fn normalize_latitude(lat: f64) -> NormalizedLatitude {
         if lat >= 270.0 {
-            lat - 360.0
+            NormalizedLatitude(lat - 360.0)
         } else {
-            lat
+            NormalizedLatitude(lat)
         }
     }
 
-    fn decode_latitude(even: &Even, odd: &Odd, j_index: i32) -> (f64, f64) {
+    fn decode_latitude(
+        even: &Even,
+        odd: &Odd,
+        j_index: i32,
+    ) -> (NormalizedLatitude, NormalizedLatitude) {
         let lat_cpr_even = f64::from(even.lat_cpr) / CPR_SCALE;
         let lat_cpr_odd = f64::from(odd.lat_cpr) / CPR_SCALE;
 
@@ -322,11 +349,14 @@ impl Position {
     /// CPR latitude zone.
     ///
     /// Global CPR decoding is invalid when the two messages correspond to
-    /// different latitude zones and a new pair of messages needs to be used
-    /// this usually happens when crossing latitude-zone boundary.
-    fn is_same_latitude_zone(lat_even: f64, lat_odd: f64) -> Result<(), AdsbError> {
-        let nl_lat_even = Self::longitude_zone_number(lat_even);
-        let nl_lat_odd = Self::longitude_zone_number(lat_odd);
+    /// different latitude zones. A new pair of messages must then be used.
+    /// This usually happens when an aircraft crosses a latitude-zone boundary.
+    fn is_same_latitude_zone(
+        lat_even: NormalizedLatitude,
+        lat_odd: NormalizedLatitude,
+    ) -> Result<(), AdsbError> {
+        let nl_lat_even = Self::longitude_zone_number(lat_even.into());
+        let nl_lat_odd = Self::longitude_zone_number(lat_odd.into());
 
         if nl_lat_even != nl_lat_odd {
             return Err(AdsbError::MismatchedLatitude);
@@ -341,7 +371,12 @@ impl Position {
     /// Even and odd CPR messages are transmitted independently, so their
     /// timestamps determine which decoded latitude should be used for the
     /// final position.
-    fn select_latitude(lat_even: f64, lat_odd: f64, time_even: Instant, time_odd: Instant) -> f64 {
+    fn select_latitude(
+        lat_even: NormalizedLatitude,
+        lat_odd: NormalizedLatitude,
+        time_even: Instant,
+        time_odd: Instant,
+    ) -> NormalizedLatitude {
         if time_even >= time_odd {
             lat_even
         } else {
@@ -349,7 +384,12 @@ impl Position {
         }
     }
 
-    fn decode_longitude(even: &Even, odd: &Odd, m_index: i32, nl_lat: i32) -> (f64, f64) {
+    fn decode_longitude(
+        even: &Even,
+        odd: &Odd,
+        m_index: i32,
+        nl_lat: i32,
+    ) -> (NormalizedLongitude, NormalizedLongitude) {
         let n_even = max(nl_lat, 1);
         let n_odd = max(nl_lat - 1, 1);
 
@@ -367,11 +407,15 @@ impl Position {
         )
     }
 
-    fn normalize_longitude(lon: f64) -> f64 {
+    /// Converts a CPR longitude from `[0, 360)` into `[-180, 180)`.
+    ///
+    /// The input is expected to be the result of the CPR longitude decoding
+    /// formula.
+    fn normalize_longitude(lon: f64) -> NormalizedLongitude {
         if lon >= 180.0 {
-            lon - 360.0
+            NormalizedLongitude(lon - 360.0)
         } else {
-            lon
+            NormalizedLongitude(lon)
         }
     }
 
@@ -381,7 +425,12 @@ impl Position {
     /// Even and odd CPR messages are transmitted independently, so their
     /// timestamps determine which decoded latitude should be used for the
     /// final position.
-    fn select_longitude(lon_even: f64, lon_odd: f64, time_even: Instant, time_odd: Instant) -> f64 {
+    fn select_longitude(
+        lon_even: NormalizedLongitude,
+        lon_odd: NormalizedLongitude,
+        time_even: Instant,
+        time_odd: Instant,
+    ) -> NormalizedLongitude {
         if time_even >= time_odd {
             lon_even
         } else {
@@ -409,7 +458,7 @@ impl Position {
         Self::is_same_latitude_zone(lat_even, lat_odd)?;
 
         let latitude = Self::select_latitude(lat_even, lat_odd, even.time, odd.time);
-        let nl_lat = Self::longitude_zone_number(latitude);
+        let nl_lat = Self::longitude_zone_number(latitude.into());
         let m_index = Self::longitude_zone_index(even, odd, nl_lat);
         let (lon_even, lon_odd) = Self::decode_longitude(even, odd, m_index, nl_lat);
 
@@ -424,15 +473,15 @@ impl Position {
     /// Returns the latitude in degrees.
     ///
     /// The value is in the range `[-90.0, 90.0]`.
-    pub const fn latitude(&self) -> f64 {
-        self.latitude
+    pub fn latitude(&self) -> f64 {
+        self.latitude.into()
     }
 
     /// Returns the longitude in degrees.
     ///
     /// The value is in the range `[-180.0, 180.0)`.
-    pub const fn longitude(&self) -> f64 {
-        self.longitude
+    pub fn longitude(&self) -> f64 {
+        self.longitude.into()
     }
 }
 
