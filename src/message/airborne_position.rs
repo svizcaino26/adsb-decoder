@@ -120,6 +120,7 @@ impl Altitude {
         (gc500, gc100)
     }
 
+    /// Converts a Gray-coded value to its binary representation.
     const fn gray_to_binary(mut value: i32) -> i32 {
         value ^= value >> 1;
         value ^= value >> 2;
@@ -128,10 +129,19 @@ impl Altitude {
         value
     }
 
+    /// Decodes the coarse altitude component from a Gillham-coded value.
+    ///
+    /// The result is expressed in feet and represents the 500-foot portion
+    /// of the altitude.
     const fn decode_coarse_altitude(b500: i32) -> i32 {
         (b500 - 2) * COARSE_ALTITUDE_STEP
     }
 
+    /// Decodes the fine altitude adjustment from the Gillham-coded altitude.
+    ///
+    /// The valid `gc100` values depend on the parity of the coarse altitude
+    /// component. Returns [`AdsbError::InvalidGillhamCode`] for an invalid
+    /// combination.
     const fn decode_fine_adjustment(b500: i32, gc100: i32) -> Result<i32, AdsbError> {
         let parity = b500 & 1;
 
