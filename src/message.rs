@@ -1,5 +1,6 @@
 use crate::{error::AdsbError, frame::RawFrame};
 
+pub mod airborne_position;
 pub mod airborne_velocity;
 pub mod aircraft_identification;
 

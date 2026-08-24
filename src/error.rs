@@ -24,4 +24,13 @@ pub enum AdsbError {
 
     #[error("Failed to convert extracted bits to target type")]
     InvalidBitConversion,
+
+    #[error("Invalid Gillham encoding")]
+    InvalidGillhamCode,
+
+    #[error("Invalid CPR format {0}")]
+    InvalidCprFormat(u8),
+
+    #[error("Mismatched latitudes")]
+    MismatchedLatitude,
 }
