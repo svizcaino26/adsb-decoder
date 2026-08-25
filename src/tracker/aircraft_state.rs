@@ -10,6 +10,8 @@ use crate::{
     },
 };
 
+const CPR_GLOBAL_DECODE_WINDOW: Duration = Duration::from_secs(10);
+
 /// Represents the currently known state of a single aircraft.
 ///
 /// The state is accumulated from the different ADS-B messages received from
@@ -50,8 +52,7 @@ impl AircraftState {
     ///
     /// Receiving a message also refreshes the timestamp used to determine
     /// whether the aircraft should be retained by the tracker.
-    pub fn update(&mut self, msg: Message) {
-        self.last_seen = Instant::now();
+    pub fn update(&mut self, msg: Message) -> Result<(), AdsbError> {
         match msg {
             Message::AircraftIdentification(aircraft_identification) => {
                 self.identification = Some(aircraft_identification);
@@ -59,6 +60,31 @@ impl AircraftState {
             Message::AirborneVelocity(airborne_velocity) => {
                 self.velocity = Some(airborne_velocity);
             }
+            Message::AirbornePosition(aircraft_altitude, cpr) => {
+                self.altitude = Some(aircraft_altitude);
+
+                match cpr {
+                    Cpr::Even(cpr_even) => self.cpr_even = Some(cpr_even),
+                    Cpr::Odd(cpr_odd) => self.cpr_odd = Some(cpr_odd),
+                }
+
+                if let (Some(cpr_even), Some(cpr_odd)) = (&self.cpr_even, &self.cpr_odd) {
+                    let time_delta = if cpr_even.time() >= cpr_odd.time() {
+                        cpr_even.time().duration_since(cpr_odd.time())
+                    } else {
+                        cpr_odd.time().duration_since(cpr_even.time())
+                    };
+
+                    if time_delta <= CPR_GLOBAL_DECODE_WINDOW {
+                        let position = Position::decode_global_position(cpr_even, cpr_odd)?;
+                        self.airborne_position = Some(position);
+                    }
+                }
+            }
         }
+
+        self.last_seen = Instant::now();
+
+        Ok(())
     }
 }
