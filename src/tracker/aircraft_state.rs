@@ -112,4 +112,26 @@ mod tests {
         assert!(state.identification.is_some());
         assert!(state.velocity.is_some());
     }
+
+    #[test]
+    #[allow(clippy::unwrap_used, clippy::panic)]
+    fn update_decodes_position_from_recent_cpr_pair() {
+        let even_frame = RawFrame::from_hex("8D40621D58C382D690C8AC2863A7").unwrap();
+        let odd_frame = RawFrame::from_hex("8D40621D58C386435CC412692AD6").unwrap();
+
+        let odd = Message::try_from(&odd_frame).unwrap();
+        let even = Message::try_from(&even_frame).unwrap();
+
+        let mut state = AircraftState::default();
+
+        state.update(even).unwrap();
+        state.update(odd).unwrap();
+
+        let position = state
+            .airborne_position
+            .expect("expected global decoded position");
+
+        assert!(dbg!((dbg!(position.latitude()) - 52.257_202_148_437_5).abs()) < 0.000_000_1);
+        assert!(dbg!((dbg!(position.longitude()) - 3.919_372_558_593_75).abs()) < 0.000_000_1);
+    }
 }
