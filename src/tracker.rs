@@ -1,6 +1,7 @@
 use std::time::Instant;
 use std::{collections::HashMap, time::Duration};
 
+use crate::error::AdsbError;
 use crate::frame::IcaoAddress;
 use crate::message::Message;
 
@@ -37,12 +38,15 @@ impl AircraftTracker {
     /// If the aircraft has not been seen before, a new state is created.
     /// Otherwise, the existing state is updated with the information contained
     /// in the message.
-    pub fn update(&mut self, msg: Message) {
+    pub fn update(&mut self, msg: Message) -> Result<(), AdsbError> {
         let icao_address = match &msg {
             Message::AircraftIdentification(msg) => msg.icao,
             Message::AirborneVelocity(msg) => msg.icao,
+            Message::AirbornePosition(aircraft_altitude, _) => aircraft_altitude.icao,
         };
 
-        self.aircraft.entry(icao_address).or_default().update(msg);
+        self.aircraft.entry(icao_address).or_default().update(msg)?;
+
+        Ok(())
     }
 }
