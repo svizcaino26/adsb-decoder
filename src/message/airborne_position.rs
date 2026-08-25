@@ -202,6 +202,12 @@ pub struct Odd {
     time: Instant,
 }
 
+impl Odd {
+    pub const fn time(&self) -> Instant {
+        self.time
+    }
+}
+
 /// CPR data extracted from an even-format airborne position message.
 ///
 /// The even and odd messages are required as a pair for global CPR
@@ -211,6 +217,12 @@ pub struct Even {
     lat_cpr: u32,
     lon_cpr: u32,
     time: Instant,
+}
+
+impl Even {
+    pub const fn time(&self) -> Instant {
+        self.time
+    }
 }
 
 /// Compact Position Reporting data extracted from an airborne position
