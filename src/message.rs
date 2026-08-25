@@ -1,4 +1,13 @@
-use crate::{error::AdsbError, frame::RawFrame};
+use std::time::Instant;
+
+use crate::{
+    error::AdsbError,
+    frame::RawFrame,
+    message::{
+        airborne_position::{AircraftAltitude, Altitude, Cpr},
+        Message::AirbornePosition,
+    },
+};
 
 pub mod airborne_position;
 pub mod airborne_velocity;
@@ -16,6 +25,7 @@ pub enum Message {
     /// Aircraft Identification and Category (Type Codes 1–4).
     AircraftIdentification(AircraftIdentification),
     AirborneVelocity(AirborneVelocity),
+    AirbornePosition(AircraftAltitude, Cpr),
 }
 
 impl TryFrom<&RawFrame> for Message {
@@ -34,6 +44,14 @@ impl TryFrom<&RawFrame> for Message {
             1..=4 => Ok(Self::AircraftIdentification(
                 AircraftIdentification::try_from(frame)?,
             )),
+            9..=18 | 20..=22 => {
+                let time = Instant::now();
+
+                Ok(Self::AirbornePosition(
+                    AircraftAltitude::try_from(frame)?,
+                    Cpr::try_from((frame, time))?,
+                ))
+            }
             19 => Ok(Self::AirborneVelocity(AirborneVelocity::try_from(frame)?)),
             tc => Err(AdsbError::UnsupportedTypeCode(tc)),
         }
