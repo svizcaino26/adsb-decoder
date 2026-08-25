@@ -22,9 +22,9 @@ pub struct AircraftState {
     identification: Option<AircraftIdentification>,
     velocity: Option<AirborneVelocity>,
     altitude: Option<AircraftAltitude>,
-    cpr_even: Option<Even>,
-    cpr_odd: Option<Odd>,
-    airborne_position: Option<Position>,
+    pub(crate) cpr_even: Option<Even>,
+    pub(crate) cpr_odd: Option<Odd>,
+    pub(crate) airborne_position: Option<Position>,
     last_seen: Instant,
 }
 

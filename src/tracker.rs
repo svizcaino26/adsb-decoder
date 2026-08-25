@@ -80,4 +80,27 @@ mod tests {
         assert_eq!(tracker.aircraft.len(), 1);
         assert!(tracker.aircraft.contains_key(&frame.icao()));
     }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn update_accumulates_state_for_same_aircraft() {
+        let even_frame = RawFrame::from_hex("8D40621D58C382D690C8AC2863A7").unwrap();
+        let odd_frame = RawFrame::from_hex("8D40621D58C386435CC412692AD6").unwrap();
+
+        let even = Message::try_from(&even_frame).unwrap();
+        let odd = Message::try_from(&odd_frame).unwrap();
+
+        let mut tracker = AircraftTracker::new();
+
+        tracker.update(even).unwrap();
+        tracker.update(odd).unwrap();
+
+        assert_eq!(tracker.aircraft.len(), 1);
+
+        let aircraft = tracker.aircraft.get(&even_frame.icao()).unwrap();
+
+        assert!(aircraft.cpr_even.is_some());
+        assert!(aircraft.cpr_odd.is_some());
+        assert!(aircraft.airborne_position.is_some());
+    }
 }
