@@ -23,6 +23,16 @@ pub struct AircraftTracker {
 }
 
 impl AircraftTracker {
+    pub fn new() -> Self {
+        Self {
+            aircraft: HashMap::new(),
+        }
+    }
+
+    pub fn get(&self, icao: IcaoAddress) -> Option<&AircraftState> {
+        self.aircraft.get(&icao)
+    }
+
     /// Removes aircraft that have not been observed within the retention threshold.
     /// Aircraft tracking expires when `last_seen + RETAIN_THRESHOLD` resolves to
     /// a time earlier than `now`.
@@ -48,5 +58,26 @@ impl AircraftTracker {
         self.aircraft.entry(icao_address).or_default().update(msg)?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::frame::RawFrame;
+
+    use super::*;
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn update_creates_aircraft_state() {
+        let frame = RawFrame::from_hex("8D4840D6202CC371C32CE0576098").unwrap();
+        let message = Message::try_from(&frame).unwrap();
+
+        let mut tracker = AircraftTracker::new();
+
+        tracker.update(message).unwrap();
+
+        assert_eq!(tracker.aircraft.len(), 1);
+        assert!(tracker.aircraft.contains_key(&frame.icao()));
     }
 }
