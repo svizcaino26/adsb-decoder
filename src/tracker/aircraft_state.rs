@@ -1,7 +1,13 @@
 use std::time::{Duration, Instant};
 
-use crate::message::{
-    airborne_velocity::AirborneVelocity, aircraft_identification::AircraftIdentification, Message,
+use crate::{
+    error::AdsbError,
+    message::{
+        airborne_position::{AircraftAltitude, Cpr, Even, Odd, Position},
+        airborne_velocity::AirborneVelocity,
+        aircraft_identification::AircraftIdentification,
+        Message,
+    },
 };
 
 /// Represents the currently known state of a single aircraft.
@@ -13,6 +19,10 @@ use crate::message::{
 pub struct AircraftState {
     identification: Option<AircraftIdentification>,
     velocity: Option<AirborneVelocity>,
+    altitude: Option<AircraftAltitude>,
+    cpr_even: Option<Even>,
+    cpr_odd: Option<Odd>,
+    airborne_position: Option<Position>,
     last_seen: Instant,
 }
 
@@ -21,6 +31,10 @@ impl Default for AircraftState {
         Self {
             identification: Option::default(),
             velocity: Option::default(),
+            altitude: Option::default(),
+            cpr_even: Option::default(),
+            cpr_odd: Option::default(),
+            airborne_position: Option::default(),
             last_seen: Instant::now(),
         }
     }
@@ -28,7 +42,7 @@ impl Default for AircraftState {
 
 impl AircraftState {
     /// Returns the amount of time elapsed since the aircraft was last observed.
-    pub fn last_seen(&self) -> Instant {
+    pub const fn last_seen(&self) -> Instant {
         self.last_seen
     }
 
