@@ -88,3 +88,28 @@ impl AircraftState {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{frame::RawFrame, message::Message};
+
+    use super::*;
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn update_accumulates_aircraft_information() {
+        let identification_frame = RawFrame::from_hex("8D4840D6202CC371C32CE0576098").unwrap();
+        let velocity_frame = RawFrame::from_hex("8D485020994409940838175B284F").unwrap();
+
+        let identification_msg = Message::try_from(&identification_frame).unwrap();
+        let velocity_msg = Message::try_from(&velocity_frame).unwrap();
+
+        let mut state = AircraftState::default();
+
+        state.update(identification_msg).unwrap();
+        state.update(velocity_msg).unwrap();
+
+        assert!(state.identification.is_some());
+        assert!(state.velocity.is_some());
+    }
+}
