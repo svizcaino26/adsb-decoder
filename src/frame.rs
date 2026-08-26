@@ -26,10 +26,12 @@ const FIELD_MESSAGE: RangeInclusive<u8> = 33..=88;
 pub struct IcaoAddress(u32);
 
 impl IcaoAddress {
+    #[must_use]
     pub const fn new(value: u32) -> Self {
         Self(value)
     }
 
+    #[must_use]
     pub const fn value(self) -> u32 {
         self.0
     }
@@ -46,10 +48,12 @@ impl Display for IcaoAddress {
 pub struct TypeCode(u8);
 
 impl TypeCode {
+    #[must_use]
     pub const fn new(value: u8) -> Self {
         Self(value)
     }
 
+    #[must_use]
     pub const fn value(self) -> u8 {
         self.0
     }
@@ -71,10 +75,11 @@ impl RawFrame {
     ///
     /// The input must contain exactly 28 hexadecimal characters.
     /// Optional dump1090 delimiters (`*` and `;`) are ignored.
-    /// # Error
+    /// # Errors
     /// - If the string is not 28 digits long.
     /// - If the string contains invalid hexadecimal characters.
     /// - If the first 5 most significant bits are not equal to 17 (Not an ADS-B message).
+    #[allow(clippy::missing_panics_doc)]
     pub fn from_hex(hex_str: &str) -> Result<Self, AdsbError> {
         let hex_str = hex_str.trim().trim_start_matches('*').trim_end_matches(';');
 
@@ -100,6 +105,11 @@ impl RawFrame {
     /// - Bit 1 is the most significant bit of the 112-bit frame.
     /// - Bit 112 is the least significant bit.
     /// - The range must be between 1 and 112 (included)
+    ///
+    /// # Errors
+    /// - If lower bound of `range` is 0.
+    /// - If lower bound of `range` > upper bound.
+    /// - If upper bound of `range` > `ADSB_FRAME_BITS`.
     ///
     /// # Examples
     ///
@@ -139,7 +149,8 @@ impl RawFrame {
             .map_err(|_| AdsbError::InvalidBitConversion)
     }
 
-    #[allow(clippy::expect_used)]
+    #[allow(clippy::expect_used, clippy::missing_panics_doc)]
+    #[must_use]
     pub fn icao(&self) -> IcaoAddress {
         IcaoAddress::new(
             self.bits(FIELD_ICAO_ADDRESS)
@@ -149,6 +160,8 @@ impl RawFrame {
         )
     }
 
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn type_code(&self) -> TypeCode {
         TypeCode::new(
             self.bits(FIELD_TYPE_CODE)
