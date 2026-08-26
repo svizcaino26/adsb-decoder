@@ -18,6 +18,7 @@ use aircraft_state::AircraftState;
 ///
 /// Aircraft that have not been observed within [`RETAIN_THRESHOLD`] are
 /// removed when [`AircraftTracker::prune`] is called.
+#[derive(Debug)]
 pub struct AircraftTracker {
     aircraft: HashMap<IcaoAddress, AircraftState>,
 }
@@ -31,6 +32,10 @@ impl AircraftTracker {
 
     pub fn get(&self, icao: IcaoAddress) -> Option<&AircraftState> {
         self.aircraft.get(&icao)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&IcaoAddress, &AircraftState)> {
+        self.aircraft.iter()
     }
 
     /// Removes aircraft that have not been observed within the retention threshold.
