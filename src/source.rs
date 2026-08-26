@@ -9,6 +9,11 @@ use thiserror::Error;
 pub trait FrameSource {
     type Error;
 
+    /// Produces a `RawFrame` from a data source.
+    ///
+    /// # Errors
+    /// - If there are any problem reading from the source.
+    /// - If `RawFrame` cannot be parsed from the soruce.
     fn next_frame(&mut self) -> Result<Option<RawFrame>, Self::Error>;
 }
 
@@ -17,6 +22,7 @@ pub struct FileSource {
 }
 
 impl FileSource {
+    #[must_use]
     pub fn from_file(file: File) -> Self {
         Self {
             reader: BufReader::new(file),
@@ -27,6 +33,12 @@ impl FileSource {
 impl FrameSource for FileSource {
     type Error = SourceError;
 
+    /// Parses a `Rawframe` from lines on the open file
+    ///
+    /// # Errors
+    /// - If ADS-B hex string is invalid.
+    /// - If Downlink Format is not ADS-B (DF 17).
+    /// - If there are any IO errors when reading the file.
     fn next_frame(&mut self) -> Result<Option<RawFrame>, Self::Error> {
         let mut line = String::new();
 

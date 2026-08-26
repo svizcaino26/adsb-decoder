@@ -24,15 +24,16 @@ pub struct AircraftTracker {
 }
 
 impl AircraftTracker {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             aircraft: HashMap::new(),
         }
     }
 
-    pub fn get(&self, icao: IcaoAddress) -> Option<&AircraftState> {
-        self.aircraft.get(&icao)
-    }
+    // pub fn get(&self, icao: IcaoAddress) -> Option<&AircraftState> {
+    //     self.aircraft.get(&icao)
+    // }
 
     pub fn iter(&self) -> impl Iterator<Item = (&IcaoAddress, &AircraftState)> {
         self.aircraft.iter()
@@ -53,6 +54,9 @@ impl AircraftTracker {
     /// If the aircraft has not been seen before, a new state is created.
     /// Otherwise, the existing state is updated with the information contained
     /// in the message.
+    ///
+    /// # Errors
+    /// - If global position decoding from paired CPR messages fails.
     pub fn update(&mut self, msg: Message) -> Result<(), AdsbError> {
         let icao_address = match &msg {
             Message::AircraftIdentification(msg) => msg.icao,
