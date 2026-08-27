@@ -9,11 +9,11 @@ use thiserror::Error;
 pub trait FrameSource {
     type Error;
 
-    /// Produces a `RawFrame` from a data source.
+    /// Parses a `RawFrame` from a data source.
     ///
     /// # Errors
     /// - If there are any problem reading from the source.
-    /// - If `RawFrame` cannot be parsed from the soruce.
+    /// - If `RawFrame` cannot be parsed from the source.
     fn next_frame(&mut self) -> Result<Option<RawFrame>, Self::Error>;
 }
 
@@ -31,7 +31,7 @@ impl FileSource {
 }
 
 impl FrameSource for FileSource {
-    type Error = SourceError;
+    type Error = FileSourceError;
 
     /// Parses a `Rawframe` from lines on the open file
     ///
@@ -53,9 +53,9 @@ impl FrameSource for FileSource {
 }
 
 #[derive(Debug, Error)]
-pub enum SourceError {
+pub enum FileSourceError {
     #[error("Failed to read frame source")]
-    IO(#[from] std::io::Error),
+    Io(#[from] std::io::Error),
     #[error("Failed to parse ADS-B frame")]
     Adsb(#[from] AdsbError),
 }
