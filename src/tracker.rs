@@ -31,9 +31,10 @@ impl AircraftTracker {
         }
     }
 
-    // pub fn get(&self, icao: IcaoAddress) -> Option<&AircraftState> {
-    //     self.aircraft.get(&icao)
-    // }
+    #[must_use]
+    pub fn get(&self, icao: IcaoAddress) -> Option<&AircraftState> {
+        self.aircraft.get(&icao)
+    }
 
     pub fn iter(&self) -> impl Iterator<Item = (&IcaoAddress, &AircraftState)> {
         self.aircraft.iter()

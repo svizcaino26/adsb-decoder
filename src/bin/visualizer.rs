@@ -29,6 +29,12 @@ struct AircraftDisplay {
     aircraft: HashMap<IcaoAddress, Aircraft>,
 }
 
+impl AircraftDisplay {
+    fn prune(&mut self, tracker: &AircraftTracker) {
+        self.aircraft.retain(|icao, _| tracker.get(*icao).is_some());
+    }
+}
+
 #[macroquad::main("Visualizer")]
 async fn main() {
     let mut aircraft_display = AircraftDisplay::default();
@@ -73,6 +79,7 @@ async fn main() {
         if prune_elapsed >= PRUNE_INTERVAL {
             prune_elapsed -= PRUNE_INTERVAL;
             tracker.prune();
+            aircraft_display.prune(&tracker);
         }
 
         for (icao, aircraft) in tracker.iter() {
@@ -109,8 +116,8 @@ async fn main() {
             draw_triangle_lines(v1, v2, v3, 2., WHITE);
             draw_text(
                 format!("{:.0} kts", aircraft.vel),
-                aircraft.pos.x + AIRCRAFT_BASE * 2.,
-                aircraft.pos.y + AIRCRAFT_HEIGHT * 2.,
+                AIRCRAFT_BASE.mul_add(2., aircraft.pos.x),
+                AIRCRAFT_HEIGHT.mul_add(2., aircraft.pos.y),
                 20.,
                 WHITE,
             );
@@ -122,9 +129,7 @@ async fn main() {
 
 fn rotate_point(point: Vec2, rotation: f32) -> Vec2 {
     Vec2::new(
-        // point.x * rotation.cos() - point.y * rotation.sin(),
         point.y.mul_add(-rotation.sin(), point.x * rotation.cos()),
-        // point.x * rotation.sin() + point.y * rotation.cos(),
         point.y.mul_add(rotation.cos(), point.x * rotation.sin()),
     )
 }
