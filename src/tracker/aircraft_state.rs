@@ -53,21 +53,18 @@ impl AircraftState {
     }
 
     pub fn velocity(&self) -> Option<f32> {
-        match &self.velocity {
-            Some(airborne_velocity) => match &airborne_velocity.velocity {
-                Velocity::GroundSpeed {
-                    east_west,
-                    north_south,
-                } => {
-                    if let (Some(ew_speed), Some(ns_speed)) =
-                        (east_west.value(), north_south.value())
-                    {
-                        Some(f32::sqrt(
-                            f32::from(ew_speed).powi(2) + f32::from(ns_speed).powi(2),
-                        ))
-                    } else {
-                        None
-                    }
+        let airborne_velocity = self.velocity.as_ref()?;
+        match &airborne_velocity.velocity {
+            Velocity::GroundSpeed {
+                east_west,
+                north_south,
+            } => {
+                if let (Some(ew_speed), Some(ns_speed)) = (east_west.value(), north_south.value()) {
+                    Some(f32::sqrt(
+                        f32::from(ew_speed).powi(2) + f32::from(ns_speed).powi(2),
+                    ))
+                } else {
+                    None
                 }
                 Velocity::AirSpeed { airspeed, .. } => {
                     if let Some(airspeed) = airspeed.value() {
