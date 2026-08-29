@@ -3,10 +3,10 @@ use std::time::{Duration, Instant};
 use crate::{
     error::AdsbError,
     message::{
-        airborne_position::{AircraftAltitude, Cpr, Even, Odd, Position},
-        airborne_velocity::AirborneVelocity,
-        aircraft_identification::AircraftIdentification,
         Message,
+        airborne_position::{AircraftAltitude, Cpr, Even, Odd, Position},
+        airborne_velocity::{AirborneVelocity, Velocity},
+        aircraft_identification::AircraftIdentification,
     },
 };
 
@@ -51,6 +51,36 @@ impl AircraftState {
     pub fn position(&self) -> Option<&Position> {
         self.airborne_position.as_ref()
     }
+
+    pub fn velocity(&self) -> Option<f32> {
+        match &self.velocity {
+            Some(airborne_velocity) => match &airborne_velocity.velocity {
+                Velocity::GroundSpeed {
+                    east_west,
+                    north_south,
+                } => {
+                    if let (Some(ew_speed), Some(ns_speed)) =
+                        (east_west.value(), north_south.value())
+                    {
+                        Some(f32::sqrt(
+                            f32::from(ew_speed).powi(2) + f32::from(ns_speed).powi(2),
+                        ))
+                    } else {
+                        None
+                    }
+                }
+                Velocity::AirSpeed { airspeed, .. } => {
+                    if let Some(airspeed) = airspeed.value() {
+                        Some(f32::from(airspeed))
+                    } else {
+                        None
+                    }
+                }
+            },
+            None => None,
+        }
+    }
+
     /// Applies an ADS-B message to the aircraft's current state.
     ///
     /// Receiving a message also refreshes the timestamp used to determine
