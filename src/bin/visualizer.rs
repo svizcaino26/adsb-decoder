@@ -63,3 +63,10 @@ async fn main() {
         next_frame().await;
     }
 }
+
+fn rotate_point(point: Vec2, rotation: f32) -> Vec2 {
+    Vec2::new(
+        point.x * rotation.cos() - point.y * rotation.sin(),
+        point.x * rotation.sin() + point.y * rotation.cos(),
+    )
+}
