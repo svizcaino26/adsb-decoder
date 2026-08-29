@@ -17,6 +17,7 @@ const PRUNE_INTERVAL: f32 = 30.0;
 const AIRCRAFT_HEIGHT: f32 = 25.;
 const AIRCRAFT_BASE: f32 = 22.;
 
+/// Represents an aircraft for display in the visualizer.
 #[derive(Default, Debug)]
 struct Aircraft {
     pos: Vec2,
@@ -24,12 +25,33 @@ struct Aircraft {
     vel: f32,
 }
 
+impl Aircraft {
+    /// Creates an effect for aircraft going off-screen to
+    /// wrap around the opposite side remaining visible.
+    fn wrap_around(&mut self) {
+        if self.pos.x > screen_width() {
+            self.pos.x = 0.;
+        } else if self.pos.x < 0. {
+            self.pos.x = screen_width();
+        }
+
+        if self.pos.y > screen_height() {
+            self.pos.y = 0.;
+        } else if self.pos.y < 0. {
+            self.pos.y = screen_height();
+        }
+    }
+}
+
+/// Keeps a map of aircraft to be rendered on screen.
 #[derive(Default, Debug)]
 struct AircraftDisplay {
     aircraft: HashMap<IcaoAddress, Aircraft>,
 }
 
 impl AircraftDisplay {
+    /// Syncronizes the display map with the tracker
+    /// removing expired aircraft from screen.
     fn prune(&mut self, tracker: &AircraftTracker) {
         self.aircraft.retain(|icao, _| tracker.get(*icao).is_some());
     }
@@ -102,7 +124,7 @@ async fn main() {
         for (_, aircraft) in &mut aircraft_display.aircraft {
             let direction = Vec2::new(aircraft.rot.sin(), -aircraft.rot.cos());
             aircraft.pos += direction * aircraft.vel * SPEED_SCALE * get_frame_time();
-            wrap_around(&mut aircraft.pos);
+            aircraft.wrap_around();
             let v1 = rotate_point(vec2(0., -AIRCRAFT_HEIGHT / 2.), aircraft.rot) + aircraft.pos;
 
             let v2 = rotate_point(
@@ -132,18 +154,4 @@ fn rotate_point(point: Vec2, rotation: f32) -> Vec2 {
         point.y.mul_add(-rotation.sin(), point.x * rotation.cos()),
         point.y.mul_add(rotation.cos(), point.x * rotation.sin()),
     )
-}
-
-fn wrap_around(pos: &mut Vec2) {
-    if pos.x > screen_width() {
-        pos.x = 0.;
-    } else if pos.x < 0. {
-        pos.x = screen_width();
-    }
-
-    if pos.y > screen_height() {
-        pos.y = 0.;
-    } else if pos.y < 0. {
-        pos.y = screen_height();
-    }
 }
