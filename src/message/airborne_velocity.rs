@@ -106,6 +106,15 @@ impl Display for EastWestVelocity {
     }
 }
 
+impl EastWestVelocity {
+    pub fn value(&self) -> Option<i16> {
+        match self {
+            Self::East(value) | Self::West(value) => Some(*value),
+            Self::Unavailable => None,
+        }
+    }
+}
+
 /// North-South component of an aircraft's ground velocity.
 ///
 /// `North` represents motion toward the north.
@@ -117,6 +126,15 @@ pub enum NorthSouthVelocity {
     North(i16),
     South(i16),
     Unavailable,
+}
+
+impl NorthSouthVelocity {
+    pub fn value(&self) -> Option<i16> {
+        match self {
+            Self::North(value) | Self::South(value) => Some(*value),
+            Self::Unavailable => None,
+        }
+    }
 }
 
 impl Display for NorthSouthVelocity {
@@ -170,6 +188,15 @@ impl Display for AirSpeed {
             Self::IndicatedAirSpeed(value) => write!(f, "{value} (IAS)"),
             Self::TrueAirSpeed(value) => write!(f, "{value} (TAS)"),
             Self::Unavailable => write!(f, "Unavailable"),
+        }
+    }
+}
+
+impl AirSpeed {
+    pub fn value(&self) -> Option<i16> {
+        match self {
+            Self::IndicatedAirSpeed(value) | Self::TrueAirSpeed(value) => Some(*value),
+            Self::Unavailable => None,
         }
     }
 }
