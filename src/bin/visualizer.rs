@@ -91,6 +91,7 @@ async fn main() {
         for (_, aircraft) in &mut aircraft_display.aircraft {
             let direction = Vec2::new(aircraft.rot.sin(), -aircraft.rot.cos());
             aircraft.pos += direction * aircraft.vel * SPEED_SCALE * get_frame_time();
+            wrap_around(&mut aircraft.pos);
             let v1 = rotate_point(vec2(0., -AIRCRAFT_HEIGHT / 2.), aircraft.rot) + aircraft.pos;
 
             let v2 = rotate_point(
@@ -115,4 +116,18 @@ fn rotate_point(point: Vec2, rotation: f32) -> Vec2 {
         // point.x * rotation.sin() + point.y * rotation.cos(),
         point.y.mul_add(rotation.cos(), point.x * rotation.sin()),
     )
+}
+
+fn wrap_around(pos: &mut Vec2) {
+    if pos.x > screen_width() {
+        pos.x = 0.;
+    } else if pos.x < 0. {
+        pos.x = screen_width();
+    }
+
+    if pos.y > screen_height() {
+        pos.y = 0.;
+    } else if pos.y < 0. {
+        pos.y = screen_height();
+    }
 }
