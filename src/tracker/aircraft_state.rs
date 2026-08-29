@@ -66,12 +66,10 @@ impl AircraftState {
                 } else {
                     None
                 }
-                Velocity::AirSpeed { airspeed, .. } => {
-                    if let Some(airspeed) = airspeed.value() {
-                        Some(f32::from(airspeed))
-                    } else {
-                        None
-                    }
+            }
+            Velocity::AirSpeed { airspeed, .. } => airspeed.value().map(f32::from),
+        }
+    }
 
     pub fn heading(&self) -> Option<f32> {
         let airborne_velocity = self.velocity.as_ref()?;
