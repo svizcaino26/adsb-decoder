@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fs::File};
 
 use adsb_decoder::{
+    frame::IcaoAddress,
     message::Message,
     source::{FileSource, FileSourceError, FrameSource},
     tracker::AircraftTracker,
@@ -30,9 +31,10 @@ struct AircraftDisplay {
 
 #[macroquad::main("Visualizer")]
 async fn main() {
+    let mut aircraft_display = AircraftDisplay::default();
     let mut frame_elapsed = 0.0;
     let mut prune_elapsed = 0.0;
-    let mut delta_time;
+    let mut frame_dt;
 
     let mut source =
         FileSource::from_file(File::open("rawframes.txt").expect("Raw frames file not found"));
@@ -41,16 +43,27 @@ async fn main() {
 
     loop {
         clear_background(BLACK);
-        delta_time = get_frame_time();
-        frame_elapsed += delta_time;
-        prune_elapsed += delta_time;
+        frame_dt = get_frame_time();
+        frame_elapsed += frame_dt;
+        prune_elapsed += frame_dt;
 
         if frame_elapsed >= FRAME_INTERVAL {
             frame_elapsed -= FRAME_INTERVAL;
             let frame = source.next_frame();
 
             match frame {
-                Ok(Some(frame)) => eprintln!("{frame:?}"), //println!("{frame:?}"),
+                Ok(Some(frame)) => {
+                    let message = Message::try_from(&frame);
+
+                    match message {
+                        Ok(msg) => {
+                            if let Err(e) = tracker.update(msg) {
+                                eprintln!("{e}");
+                            }
+                        }
+                        Err(e) => eprintln!("{e}"),
+                    }
+                }
                 Ok(None) => (),
                 Err(FileSourceError::Io(e)) => eprint!("{e}"),
                 Err(FileSourceError::Adsb(e)) => eprintln!("{e}"),
@@ -67,11 +80,7 @@ async fn main() {
                 aircraft_display
                     .aircraft
                     .entry(*icao)
-                    .and_modify(|v| {
-                        v.rot = heading;
-                        v.vel = velocity
-                    })
-                    .or_insert(Aircraft {
+                    .or_insert_with(|| Aircraft {
                         pos: Vec2::new(screen_width() / 2., screen_height() / 2.),
                         vel: velocity,
                         rot: heading,
@@ -79,7 +88,7 @@ async fn main() {
             }
         }
 
-        for (_, aircraft) in aircraft_display.aircraft.iter_mut() {
+        for (_, aircraft) in &mut aircraft_display.aircraft {
             let direction = Vec2::new(aircraft.rot.sin(), -aircraft.rot.cos());
             aircraft.pos += direction * aircraft.vel * SPEED_SCALE * get_frame_time();
             let v1 = rotate_point(vec2(0., -AIRCRAFT_HEIGHT / 2.), aircraft.rot) + aircraft.pos;
@@ -101,7 +110,9 @@ async fn main() {
 
 fn rotate_point(point: Vec2, rotation: f32) -> Vec2 {
     Vec2::new(
-        point.x * rotation.cos() - point.y * rotation.sin(),
-        point.x * rotation.sin() + point.y * rotation.cos(),
+        // point.x * rotation.cos() - point.y * rotation.sin(),
+        point.y.mul_add(-rotation.sin(), point.x * rotation.cos()),
+        // point.x * rotation.sin() + point.y * rotation.cos(),
+        point.y.mul_add(rotation.cos(), point.x * rotation.sin()),
     )
 }

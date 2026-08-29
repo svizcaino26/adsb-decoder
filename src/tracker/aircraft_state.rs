@@ -48,7 +48,7 @@ impl AircraftState {
         self.last_seen
     }
 
-    pub fn position(&self) -> Option<&Position> {
+    pub const fn position(&self) -> Option<&Position> {
         self.airborne_position.as_ref()
     }
 
@@ -61,7 +61,8 @@ impl AircraftState {
             } => {
                 if let (Some(ew_speed), Some(ns_speed)) = (east_west.value(), north_south.value()) {
                     Some(f32::sqrt(
-                        f32::from(ew_speed).powi(2) + f32::from(ns_speed).powi(2),
+                        f32::from(ew_speed)
+                            .mul_add(f32::from(ew_speed), f32::from(ns_speed).powi(2)),
                     ))
                 } else {
                     None
