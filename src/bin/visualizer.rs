@@ -7,7 +7,8 @@ use adsb_decoder::{
 };
 use macroquad::prelude::*;
 
-/// Interval for processing frames from source 1 every second.
+const SPEED_SCALE: f32 = 0.1;
+/// Interval between processing frames from the source.
 const FRAME_INTERVAL: f32 = 1.0;
 /// Interval for running `prune()` method on `AircraftTracker`.
 const PRUNE_INTERVAL: f32 = 30.0;
@@ -82,6 +83,18 @@ async fn main() {
             let direction = Vec2::new(aircraft.rot.sin(), -aircraft.rot.cos());
             aircraft.pos += direction * aircraft.vel * SPEED_SCALE * get_frame_time();
             let v1 = rotate_point(vec2(0., -AIRCRAFT_HEIGHT / 2.), aircraft.rot) + aircraft.pos;
+
+            let v2 = rotate_point(
+                vec2(-AIRCRAFT_BASE / 2., AIRCRAFT_HEIGHT / 2.),
+                aircraft.rot,
+            ) + aircraft.pos;
+
+            let v3 = rotate_point(vec2(AIRCRAFT_BASE / 2., AIRCRAFT_HEIGHT / 2.), aircraft.rot)
+                + aircraft.pos;
+
+            draw_triangle_lines(v1, v2, v3, 2., WHITE);
+        }
+
         next_frame().await;
     }
 }
