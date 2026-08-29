@@ -103,6 +103,13 @@ async fn main() {
                 + aircraft.pos;
 
             draw_triangle_lines(v1, v2, v3, 2., WHITE);
+            draw_text(
+                format!("{:.0} kts", aircraft.vel),
+                aircraft.pos.x + AIRCRAFT_BASE * 2.,
+                aircraft.pos.y + AIRCRAFT_HEIGHT * 2.,
+                20.,
+                WHITE,
+            );
         }
 
         next_frame().await;
