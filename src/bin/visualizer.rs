@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{collections::HashMap, fs::File};
 
 use adsb_decoder::{
     message::Message,
@@ -11,6 +11,21 @@ use macroquad::prelude::*;
 const FRAME_INTERVAL: f32 = 1.0;
 /// Interval for running `prune()` method on `AircraftTracker`.
 const PRUNE_INTERVAL: f32 = 30.0;
+
+const AIRCRAFT_HEIGHT: f32 = 25.;
+const AIRCRAFT_BASE: f32 = 22.;
+
+#[derive(Default, Debug)]
+struct Aircraft {
+    pos: Vec2,
+    rot: f32,
+    vel: f32,
+}
+
+#[derive(Default, Debug)]
+struct AircraftDisplay {
+    aircraft: HashMap<IcaoAddress, Aircraft>,
+}
 
 #[macroquad::main("Visualizer")]
 async fn main() {
