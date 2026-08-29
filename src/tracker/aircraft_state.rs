@@ -48,6 +48,9 @@ impl AircraftState {
         self.last_seen
     }
 
+    pub fn position(&self) -> Option<&Position> {
+        self.airborne_position.as_ref()
+    }
     /// Applies an ADS-B message to the aircraft's current state.
     ///
     /// Receiving a message also refreshes the timestamp used to determine
