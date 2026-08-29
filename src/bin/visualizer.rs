@@ -60,6 +60,28 @@ async fn main() {
             prune_elapsed -= PRUNE_INTERVAL;
             tracker.prune();
         }
+
+        for (icao, aircraft) in tracker.iter() {
+            if let (Some(velocity), Some(heading)) = (aircraft.velocity(), aircraft.heading()) {
+                aircraft_display
+                    .aircraft
+                    .entry(*icao)
+                    .and_modify(|v| {
+                        v.rot = heading;
+                        v.vel = velocity
+                    })
+                    .or_insert(Aircraft {
+                        pos: Vec2::new(screen_width() / 2., screen_height() / 2.),
+                        vel: velocity,
+                        rot: heading,
+                    });
+            }
+        }
+
+        for (_, aircraft) in aircraft_display.aircraft.iter_mut() {
+            let direction = Vec2::new(aircraft.rot.sin(), -aircraft.rot.cos());
+            aircraft.pos += direction * aircraft.vel * SPEED_SCALE * get_frame_time();
+            let v1 = rotate_point(vec2(0., -AIRCRAFT_HEIGHT / 2.), aircraft.rot) + aircraft.pos;
         next_frame().await;
     }
 }
