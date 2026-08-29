@@ -72,9 +72,23 @@ impl AircraftState {
                     } else {
                         None
                     }
+
+    pub fn heading(&self) -> Option<f32> {
+        let airborne_velocity = self.velocity.as_ref()?;
+        match &airborne_velocity.velocity {
+            Velocity::GroundSpeed {
+                east_west,
+                north_south,
+            } => {
+                if let (Some(ew_speed), Some(ns_speed)) = (east_west.value(), north_south.value()) {
+                    let heading = f32::atan2(f32::from(ew_speed), f32::from(ns_speed)).to_degrees();
+
+                    Some((heading + 360.0) % 360.0)
+                } else {
+                    None
                 }
-            },
-            None => None,
+            }
+            Velocity::AirSpeed { heading, .. } => heading.value().map(f32::from),
         }
     }
 
