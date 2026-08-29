@@ -80,6 +80,10 @@ async fn main() {
                 aircraft_display
                     .aircraft
                     .entry(*icao)
+                    .and_modify(|aircraft| {
+                        aircraft.vel = velocity;
+                        aircraft.rot = heading;
+                    })
                     .or_insert_with(|| Aircraft {
                         pos: Vec2::new(screen_width() / 2., screen_height() / 2.),
                         vel: velocity,
