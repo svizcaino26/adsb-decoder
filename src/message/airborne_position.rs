@@ -41,6 +41,7 @@ pub struct Feet(i32);
 
 impl Feet {
     /// Returns the altitude in feet.
+    #[must_use]
     pub const fn value(self) -> i32 {
         self.0
     }
@@ -52,6 +53,7 @@ pub struct Meters(i32);
 
 impl Meters {
     /// Returns the altitude in meters.
+    #[must_use]
     pub const fn value(self) -> i32 {
         self.0
     }
@@ -203,6 +205,7 @@ pub struct Odd {
 }
 
 impl Odd {
+    #[must_use]
     pub const fn time(&self) -> Instant {
         self.time
     }
@@ -220,6 +223,7 @@ pub struct Even {
 }
 
 impl Even {
+    #[must_use]
     pub const fn time(&self) -> Instant {
         self.time
     }
@@ -472,6 +476,8 @@ impl Position {
     /// 6. Decodes the longitude from both messages.
     /// 7. Selects the longitude from the most recent message.
     ///
+    /// # Errors
+    ///
     /// Returns an error if the two messages belong to different latitude zones.
     pub fn decode_global_position(even: &Even, odd: &Odd) -> Result<Self, AdsbError> {
         let j_index = Self::latitude_zone_index(even, odd);
@@ -495,6 +501,7 @@ impl Position {
     /// Returns the latitude in degrees.
     ///
     /// The value is in the range `[-90.0, 90.0]`.
+    #[must_use]
     pub fn latitude(&self) -> f64 {
         self.latitude.into()
     }
@@ -502,6 +509,7 @@ impl Position {
     /// Returns the longitude in degrees.
     ///
     /// The value is in the range `[-180.0, 180.0)`.
+    #[must_use]
     pub fn longitude(&self) -> f64 {
         self.longitude.into()
     }

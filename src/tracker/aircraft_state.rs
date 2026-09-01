@@ -3,10 +3,10 @@ use std::time::{Duration, Instant};
 use crate::{
     error::AdsbError,
     message::{
-        airborne_position::{AircraftAltitude, Cpr, Even, Odd, Position},
-        airborne_velocity::AirborneVelocity,
-        aircraft_identification::AircraftIdentification,
         Message,
+        airborne_position::{AircraftAltitude, Cpr, Even, Odd, Position},
+        airborne_velocity::{AirborneVelocity, Velocity},
+        aircraft_identification::AircraftIdentification,
     },
 };
 
@@ -46,6 +46,49 @@ impl AircraftState {
     /// Returns the amount of time elapsed since the aircraft was last observed.
     pub const fn last_seen(&self) -> Instant {
         self.last_seen
+    }
+
+    pub const fn position(&self) -> Option<&Position> {
+        self.airborne_position.as_ref()
+    }
+
+    pub fn velocity(&self) -> Option<f32> {
+        let airborne_velocity = self.velocity.as_ref()?;
+        match &airborne_velocity.velocity {
+            Velocity::GroundSpeed {
+                east_west,
+                north_south,
+            } => {
+                if let (Some(ew_speed), Some(ns_speed)) = (east_west.value(), north_south.value()) {
+                    Some(f32::sqrt(
+                        f32::from(ew_speed)
+                            .mul_add(f32::from(ew_speed), f32::from(ns_speed).powi(2)),
+                    ))
+                } else {
+                    None
+                }
+            }
+            Velocity::AirSpeed { airspeed, .. } => airspeed.value().map(f32::from),
+        }
+    }
+
+    pub fn heading(&self) -> Option<f32> {
+        let airborne_velocity = self.velocity.as_ref()?;
+        match &airborne_velocity.velocity {
+            Velocity::GroundSpeed {
+                east_west,
+                north_south,
+            } => {
+                if let (Some(ew_speed), Some(ns_speed)) = (east_west.value(), north_south.value()) {
+                    let heading = f32::atan2(f32::from(ew_speed), f32::from(ns_speed)).to_degrees();
+
+                    Some((heading + 360.0) % 360.0)
+                } else {
+                    None
+                }
+            }
+            Velocity::AirSpeed { heading, .. } => heading.value().map(f32::from),
+        }
     }
 
     /// Applies an ADS-B message to the aircraft's current state.

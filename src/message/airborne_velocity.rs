@@ -28,7 +28,7 @@ const FIELD_EAST_WEST_VELOCITY: RangeInclusive<u8> = 47u8..=56u8;
 const NORTH_SOUTH_VELOCITY_SIGN: RangeInclusive<u8> = 57u8..=57u8;
 const FIELD_NORTH_SOUTH_VELOCITY: RangeInclusive<u8> = 58u8..=67u8;
 const MAGNETIC_HEADING_STATUS: RangeInclusive<u8> = 46u8..=46u8;
-const DEGREES_PER_LSB: f64 = 360.0 / 1024.0;
+const DEGREES_PER_LSB: f32 = 360.0 / 1024.0;
 const FIELD_MAGNETIC_HEADING: RangeInclusive<u8> = 47u8..=56u8;
 const AIRSPEED_TYPE: RangeInclusive<u8> = 57u8..=57u8;
 const FIELD_AIRSPEED: RangeInclusive<u8> = 58u8..=67u8;
@@ -106,6 +106,16 @@ impl Display for EastWestVelocity {
     }
 }
 
+impl EastWestVelocity {
+    #[must_use]
+    pub const fn value(&self) -> Option<i16> {
+        match self {
+            Self::East(value) | Self::West(value) => Some(*value),
+            Self::Unavailable => None,
+        }
+    }
+}
+
 /// North-South component of an aircraft's ground velocity.
 ///
 /// `North` represents motion toward the north.
@@ -117,6 +127,16 @@ pub enum NorthSouthVelocity {
     North(i16),
     South(i16),
     Unavailable,
+}
+
+impl NorthSouthVelocity {
+    #[must_use]
+    pub const fn value(&self) -> Option<i16> {
+        match self {
+            Self::North(value) | Self::South(value) => Some(*value),
+            Self::Unavailable => None,
+        }
+    }
 }
 
 impl Display for NorthSouthVelocity {
@@ -136,7 +156,7 @@ impl Display for NorthSouthVelocity {
 /// heading information.
 #[derive(Debug, PartialEq)]
 pub enum MagneticHeading {
-    Available(f64),
+    Available(f32),
     Unavailable,
 }
 
@@ -145,6 +165,16 @@ impl Display for MagneticHeading {
         match self {
             Self::Available(value) => write!(f, "{value:.2} degrees"),
             Self::Unavailable => write!(f, "Unavailable"),
+        }
+    }
+}
+
+impl MagneticHeading {
+    #[must_use]
+    pub fn value(&self) -> Option<f32> {
+        match &self {
+            Self::Available(value) => Some(f32::from(*value)),
+            Self::Unavailable => None,
         }
     }
 }
@@ -174,6 +204,16 @@ impl Display for AirSpeed {
     }
 }
 
+impl AirSpeed {
+    #[must_use]
+    pub const fn value(&self) -> Option<i16> {
+        match self {
+            Self::IndicatedAirSpeed(value) | Self::TrueAirSpeed(value) => Some(*value),
+            Self::Unavailable => None,
+        }
+    }
+}
+
 /// ADS-B velocity messages (Type Code 19) may encode Ground Speed,
 /// or Air Speed when Ground Speed cannot be obtained.
 ///
@@ -199,7 +239,7 @@ impl Velocity {
         multiplier * (value - 1)
     }
 
-    const fn decode_magnetic_heading(value: f64) -> f64 {
+    const fn decode_magnetic_heading(value: f32) -> f32 {
         value * DEGREES_PER_LSB
     }
 }
@@ -253,7 +293,7 @@ impl TryFrom<&RawFrame> for Velocity {
                 } else {
                     // heading here is a 10 bit encoded value, will always fit in an f64 so the conversion is safe.
                     #[allow(clippy::as_conversions, clippy::cast_precision_loss)]
-                    let heading = frame.bits(FIELD_MAGNETIC_HEADING)? as f64;
+                    let heading = frame.bits(FIELD_MAGNETIC_HEADING)? as f32;
                     MagneticHeading::Available(Self::decode_magnetic_heading(heading))
                 };
 

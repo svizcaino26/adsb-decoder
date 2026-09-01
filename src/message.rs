@@ -3,18 +3,15 @@ use std::time::Instant;
 use crate::{
     error::AdsbError,
     frame::RawFrame,
-    message::{
-        airborne_position::{AircraftAltitude, Altitude, Cpr},
-        Message::AirbornePosition,
-    },
+    message::airborne_position::{AircraftAltitude, Cpr},
 };
 
 pub mod airborne_position;
 pub mod airborne_velocity;
 pub mod aircraft_identification;
 
-use airborne_velocity::{AirborneVelocity, Velocity};
-use aircraft_identification::{AircraftCategory, AircraftIdentification};
+use airborne_velocity::AirborneVelocity;
+use aircraft_identification::AircraftIdentification;
 
 /// Represents a decoded ADS-B message.
 ///
@@ -62,9 +59,12 @@ impl TryFrom<&RawFrame> for Message {
 mod tests {
     use crate::{
         frame,
-        message::airborne_velocity::{
-            AirSpeed, EastWestVelocity, GeometricAltitudeDelta, MagneticHeading,
-            NorthSouthVelocity, VerticalRate,
+        message::{
+            airborne_velocity::{
+                AirSpeed, EastWestVelocity, GeometricAltitudeDelta, MagneticHeading,
+                NorthSouthVelocity, Velocity, VerticalRate,
+            },
+            aircraft_identification::AircraftCategory,
         },
     };
 
